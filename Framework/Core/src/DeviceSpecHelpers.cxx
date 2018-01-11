@@ -9,6 +9,7 @@
 // or submit itself to any jurisdiction.
 #include "WorkflowHelpers.h"
 #include "DeviceSpecHelpers.h"
+#include "Framework/ChannelConfigurationPolicy.h"
 #include "Framework/DeviceSpec.h"
 #include "Framework/WorkflowSpec.h"
 #include "Framework/ChannelMatching.h"
@@ -33,6 +34,17 @@ namespace framework {
 
 using LogicalChannelsMap = std::map<LogicalChannel, size_t>;
 
+char const *channelTypeFromEnum(enum ChannelType type) {
+  switch (type) {
+    case Pub: return "pub";
+    case Sub: return "sub";
+    case Push: return "push";
+    case Pull: return "pull";
+    case Req: return "req";
+    case Reply: return "reply";
+  }
+}
+
 /// This creates a string to configure channels of a FairMQDevice
 /// FIXME: support shared memory
 std::string inputChannel2String(const InputChannelSpec &channel) {
@@ -41,7 +53,7 @@ std::string inputChannel2String(const InputChannelSpec &channel) {
   auto addressFormat = (channel.method == Bind ? "tcp://*:%d" : "tcp://127.0.0.1:%d");
 
   result += "name=" + channel.name + ",";
-  result += std::string("type=") + (channel.type == Pub ? "pub" : "sub") + ",";
+  result += std::string("type=") + channelTypeFromEnum(channel.type) + ",";
   result += std::string("method=") + (channel.method == Bind ? "bind" : "connect") + ",";
   result += std::string("address=") + (snprintf(buffer,32,addressFormat, channel.port), buffer);
 
@@ -71,7 +83,8 @@ DeviceSpecHelpers::processOutEdgeActions(
       const std::vector<DeviceConnectionEdge> &logicalEdges,
       const std::vector<EdgeAction> &actions,
       const WorkflowSpec &workflow,
-      const std::vector<OutputSpec> &outputsMatchers
+      const std::vector<OutputSpec> &outputsMatchers,
+      const std::vector<ChannelConfigurationPolicy> &channelPolicies
     ) {
   // The topology cannot be empty or not connected. If that is the case, than
   // something before this went wrong.
@@ -104,18 +117,22 @@ DeviceSpecHelpers::processOutEdgeActions(
     return devices.size() - 1;
   };
 
-  auto channelFromDeviceEdgeAndPort = [&workflow]
+  auto channelFromDeviceEdgeAndPort = [&workflow,&channelPolicies]
     (const DeviceSpec &device, const DeviceConnectionEdge &edge, short port) {
     OutputChannelSpec channel;
     auto &consumer = workflow[edge.consumer];
-    std::string consumerName = workflow[edge.consumer].name;
+    std::string consumerDeviceId = consumer.name;
     if (consumer.maxInputTimeslices != 1) {
-      consumerName += "_t" + std::to_string(edge.timeIndex);
+      consumerDeviceId += "_t" + std::to_string(edge.timeIndex);
     }
-    channel.name = "from_" + device.id + "_to_" + consumerName;
-    channel.method = Bind;
-    channel.type = Pub;
+    channel.name = "from_" + device.id + "_to_" + consumerDeviceId;
     channel.port = port;
+    for (auto &policy : channelPolicies) {
+      if (policy.match(device.id, consumerDeviceId)) {
+        policy.modifyOutput(channel);
+        break;
+      }
+    }
     return std::move(channel);
   };
 
@@ -235,7 +252,8 @@ DeviceSpecHelpers::processInEdgeActions(
       const std::vector<DeviceConnectionEdge> &logicalEdges,
       const std::vector<EdgeAction> &actions,
       const WorkflowSpec &workflow,
-      std::vector<LogicalForwardInfo> const &availableForwardsInfo
+      std::vector<LogicalForwardInfo> const &availableForwardsInfo,
+      std::vector<ChannelConfigurationPolicy> const &channelPolicies
     ) {
   auto const &constDeviceIndex = deviceIndex;
 
@@ -335,15 +353,21 @@ DeviceSpecHelpers::processInEdgeActions(
     }
     return true;
   };
-  auto appendInputChannelForConsumerDevice = [&devices,&connections,&checkNoDuplicatesFor]
+  auto appendInputChannelForConsumerDevice = [&devices,
+                                              &connections,
+                                              &checkNoDuplicatesFor,
+                                              &channelPolicies]
         (size_t pi, size_t ci, int16_t port) {
     auto const &producerDevice = devices[pi];
     auto &consumerDevice = devices[ci];
     InputChannelSpec channel;
     channel.name = "from_" + producerDevice.id + "_to_" + consumerDevice.id;
-    channel.method = ChannelMethod::Connect;
-    channel.type = ChannelType::Sub;
     channel.port = port;
+    for (auto &policy : channelPolicies) {
+      if (policy.match(producerDevice.id, consumerDevice.id)) {
+        policy.modifyInput(channel);
+      }
+    }
     assert(checkNoDuplicatesFor(consumerDevice.inputChannels, channel.name));
     consumerDevice.inputChannels.push_back(channel);
     return consumerDevice.inputChannels.size() - 1;
@@ -406,8 +430,9 @@ DeviceSpecHelpers::processInEdgeActions(
 // FIXME: make start port configurable?
 void
 DeviceSpecHelpers::dataProcessorSpecs2DeviceSpecs(
-    const o2::framework::WorkflowSpec &workflow,
-    std::vector<o2::framework::DeviceSpec> &devices) {
+    WorkflowSpec const &workflow,
+    std::vector<ChannelConfigurationPolicy> const &channelPolicies,
+    std::vector<DeviceSpec> &devices) {
 
   std::vector<LogicalForwardInfo> availableForwardsInfo;
   std::vector<DeviceConnectionEdge> logicalEdges;
@@ -451,7 +476,8 @@ DeviceSpecHelpers::dataProcessorSpecs2DeviceSpecs(
       logicalEdges,
       actions,
       workflow,
-      outputs
+      outputs,
+      channelPolicies
       );
 
 
@@ -471,7 +497,8 @@ DeviceSpecHelpers::dataProcessorSpecs2DeviceSpecs(
       logicalEdges,
       inActions,
       workflow,
-      availableForwardsInfo
+      availableForwardsInfo,
+      channelPolicies
       );
 }
 

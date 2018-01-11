@@ -43,8 +43,10 @@ WorkflowSpec defineDataProcessing1() {
 
 BOOST_AUTO_TEST_CASE(TestDeviceSpec1) {
   auto workflow = defineDataProcessing1();
+  auto channelPolicies = ChannelConfigurationPolicy::createDefaultPolicies();
+  BOOST_REQUIRE_EQUAL(channelPolicies.empty(), false);
   std::vector<DeviceSpec> devices;
-  DeviceSpecHelpers::dataProcessorSpecs2DeviceSpecs(workflow, devices);
+  DeviceSpecHelpers::dataProcessorSpecs2DeviceSpecs(workflow, channelPolicies, devices);
   BOOST_CHECK_EQUAL(devices.size(), 2);
   BOOST_CHECK_EQUAL(devices[0].outputChannels.size(), 1);
   BOOST_CHECK_EQUAL(devices[0].outputChannels[0].method, Bind);
@@ -56,6 +58,37 @@ BOOST_AUTO_TEST_CASE(TestDeviceSpec1) {
   BOOST_CHECK_EQUAL(devices[1].inputChannels.size(), 1);
   BOOST_CHECK_EQUAL(devices[1].inputChannels[0].method, Connect);
   BOOST_CHECK_EQUAL(devices[1].inputChannels[0].type, Sub);
+  BOOST_CHECK_EQUAL(devices[1].inputChannels[0].name, "from_A_to_B");
+  BOOST_CHECK_EQUAL(devices[1].inputChannels[0].port, 22000);
+
+  BOOST_CHECK_EQUAL(devices[1].inputs.size(), 1);
+  BOOST_CHECK_EQUAL(devices[1].inputs[0].sourceChannel, "from_A_to_B");
+}
+
+// Same as before, but using PUSH/PULL as policy
+BOOST_AUTO_TEST_CASE(TestDeviceSpec1PushPull) {
+  auto workflow = defineDataProcessing1();
+  ChannelConfigurationPolicy pushPullPolicy;
+  pushPullPolicy.match = ChannelConfigurationPolicyHelpers::matchAny;
+  pushPullPolicy.modifyInput = ChannelConfigurationPolicyHelpers::pullInput;
+  pushPullPolicy.modifyOutput = ChannelConfigurationPolicyHelpers::pushOutput;
+
+  std::vector<ChannelConfigurationPolicy> channelPolicies = {pushPullPolicy};
+
+  BOOST_REQUIRE_EQUAL(channelPolicies.empty(), false);
+  std::vector<DeviceSpec> devices;
+  DeviceSpecHelpers::dataProcessorSpecs2DeviceSpecs(workflow, channelPolicies, devices);
+  BOOST_CHECK_EQUAL(devices.size(), 2);
+  BOOST_CHECK_EQUAL(devices[0].outputChannels.size(), 1);
+  BOOST_CHECK_EQUAL(devices[0].outputChannels[0].method, Bind);
+  BOOST_CHECK_EQUAL(devices[0].outputChannels[0].type, Push);
+  BOOST_CHECK_EQUAL(devices[0].outputChannels[0].name, "from_A_to_B");
+  BOOST_CHECK_EQUAL(devices[0].outputChannels[0].port, 22000);
+  BOOST_CHECK_EQUAL(devices[0].outputs.size(), 1);
+
+  BOOST_CHECK_EQUAL(devices[1].inputChannels.size(), 1);
+  BOOST_CHECK_EQUAL(devices[1].inputChannels[0].method, Connect);
+  BOOST_CHECK_EQUAL(devices[1].inputChannels[0].type, Pull);
   BOOST_CHECK_EQUAL(devices[1].inputChannels[0].name, "from_A_to_B");
   BOOST_CHECK_EQUAL(devices[1].inputChannels[0].port, 22000);
 
@@ -87,9 +120,10 @@ WorkflowSpec defineDataProcessing2() {
 
 BOOST_AUTO_TEST_CASE(TestDeviceSpec2) {
   auto workflow = defineDataProcessing2();
+  auto channelPolicies = ChannelConfigurationPolicy::createDefaultPolicies();
   std::vector<DeviceSpec> devices;
 
-  DeviceSpecHelpers::dataProcessorSpecs2DeviceSpecs(workflow, devices);
+  DeviceSpecHelpers::dataProcessorSpecs2DeviceSpecs(workflow, channelPolicies, devices);
   BOOST_CHECK_EQUAL(devices.size(), 2);
   BOOST_CHECK_EQUAL(devices[0].outputChannels.size(), 1);
   BOOST_CHECK_EQUAL(devices[0].outputChannels[0].method, Bind);
@@ -134,9 +168,10 @@ WorkflowSpec defineDataProcessing3() {
 
 BOOST_AUTO_TEST_CASE(TestDeviceSpec3) {
   auto workflow = defineDataProcessing3();
+  auto channelPolicies = ChannelConfigurationPolicy::createDefaultPolicies();
   std::vector<DeviceSpec> devices;
 
-  DeviceSpecHelpers::dataProcessorSpecs2DeviceSpecs(workflow, devices);
+  DeviceSpecHelpers::dataProcessorSpecs2DeviceSpecs(workflow, channelPolicies, devices);
   BOOST_CHECK_EQUAL(devices.size(), 3);
   BOOST_CHECK_EQUAL(devices[0].outputChannels.size(), 2);
   BOOST_CHECK_EQUAL(devices[0].outputChannels[0].method, Bind);
@@ -202,9 +237,10 @@ WorkflowSpec defineDataProcessing4() {
 
 BOOST_AUTO_TEST_CASE(TestDeviceSpec4) {
   auto workflow = defineDataProcessing4();
+  auto channelPolicies = ChannelConfigurationPolicy::createDefaultPolicies();
   std::vector<DeviceSpec> devices;
 
-  DeviceSpecHelpers::dataProcessorSpecs2DeviceSpecs(workflow, devices);
+  DeviceSpecHelpers::dataProcessorSpecs2DeviceSpecs(workflow, channelPolicies, devices);
   BOOST_CHECK_EQUAL(devices.size(), 4);
   BOOST_CHECK_EQUAL(devices[0].outputChannels.size(), 2);
   BOOST_CHECK_EQUAL(devices[0].outputChannels[0].method, Bind);
@@ -277,8 +313,10 @@ WorkflowSpec defineDataProcessing5() {
 
 BOOST_AUTO_TEST_CASE(TestTopologyForwarding) {
   auto workflow = defineDataProcessing5();
+  auto channelPolicies = ChannelConfigurationPolicy::createDefaultPolicies();
   std::vector<DeviceSpec> devices;
-  DeviceSpecHelpers::dataProcessorSpecs2DeviceSpecs(workflow, devices);
+
+  DeviceSpecHelpers::dataProcessorSpecs2DeviceSpecs(workflow, channelPolicies, devices);
   BOOST_CHECK_EQUAL(devices.size(), 3);
   BOOST_CHECK_EQUAL(devices[0].outputChannels.size(), 1);
   BOOST_CHECK_EQUAL(devices[0].outputChannels[0].method, Bind);
@@ -420,6 +458,7 @@ BOOST_AUTO_TEST_CASE(TestOutEdgeProcessingHelpers) {
   };
 
   WorkflowSpec workflow = defineDataProcessing7();
+  auto channelPolicies = ChannelConfigurationPolicy::createDefaultPolicies();
 
   DeviceSpecHelpers::processOutEdgeActions(
       devices,
@@ -430,7 +469,8 @@ BOOST_AUTO_TEST_CASE(TestOutEdgeProcessingHelpers) {
       logicalEdges,
       actions,
       workflow,
-      globalOutputs);
+      globalOutputs,
+      channelPolicies);
 
   std::vector<DeviceId> expectedDeviceIndex = {
     {0,0,0},
@@ -497,7 +537,8 @@ BOOST_AUTO_TEST_CASE(TestOutEdgeProcessingHelpers) {
     logicalEdges,
     inActions,
     workflow,
-    availableForwardsInfo
+    availableForwardsInfo,
+    channelPolicies
   );
   // 
   std::vector<DeviceId> expectedDeviceIndexFinal = {
@@ -615,7 +656,8 @@ BOOST_AUTO_TEST_CASE(TestOutEdgeProcessingHelpers) {
 BOOST_AUTO_TEST_CASE(TestTopologyLayeredTimePipeline) {
   auto workflow = defineDataProcessing7();
   std::vector<DeviceSpec> devices;
-  DeviceSpecHelpers::dataProcessorSpecs2DeviceSpecs(workflow, devices);
+  auto channelPolicies = ChannelConfigurationPolicy::createDefaultPolicies();
+  DeviceSpecHelpers::dataProcessorSpecs2DeviceSpecs(workflow, channelPolicies, devices);
   BOOST_CHECK_EQUAL(devices.size(), 6);
   BOOST_CHECK_EQUAL(devices[0].id, "A");
   BOOST_CHECK_EQUAL(devices[1].id, "B_t0");
