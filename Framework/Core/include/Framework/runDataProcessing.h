@@ -55,12 +55,12 @@ void defaultConfiguration(std::vector<o2::framework::ChannelConfigurationPolicy>
 
 struct UserCustomizationsHelper {
   template<typename T>
-  static auto userDefinedCustomization(T something, int preferUser) -> decltype(customize(something), void()) {
+  static auto userDefinedCustomization(T& something, int preferUser) -> decltype(customize(something), void()) {
     customize(something);
   }
 
   template<typename T>
-  static auto userDefinedCustomization(T something, long preferUser) -> decltype(defaultConfiguration(something), void()) {
+  static auto userDefinedCustomization(T& something, long preferUser) -> decltype(defaultConfiguration(something), void()) {
     defaultConfiguration(something);
   }
 };

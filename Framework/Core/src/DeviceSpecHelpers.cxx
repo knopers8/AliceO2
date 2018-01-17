@@ -66,7 +66,7 @@ std::string outputChannel2String(const OutputChannelSpec &channel) {
   auto addressFormat = (channel.method == Bind ? "tcp://*:%d" : "tcp://127.0.0.1:%d");
 
   result += "name=" + channel.name + ",";
-  result += std::string("type=") + (channel.type == Pub ? "pub" : "sub") + ",";
+  result += std::string("type=") + channelTypeFromEnum(channel.type) + ",";
   result += std::string("method=") + (channel.method == Bind ? "bind" : "connect") + ",";
   result += std::string("address=") + (snprintf(buffer,32,addressFormat, channel.port), buffer);
 
