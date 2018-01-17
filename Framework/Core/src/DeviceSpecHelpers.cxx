@@ -130,7 +130,7 @@ DeviceSpecHelpers::processOutEdgeActions(
     for (auto &policy : channelPolicies) {
       if (policy.match(device.id, consumerDeviceId)) {
         policy.modifyOutput(channel);
-        break;
+//        break;
       }
     }
     return std::move(channel);
