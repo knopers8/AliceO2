@@ -18,7 +18,7 @@ namespace framework
 {
 
 InputRecord::InputRecord(std::vector<InputRoute> const &inputsSchema,
-                               std::vector<std::unique_ptr<FairMQMessage>> const& cache)
+                         std::vector<std::unique_ptr<FairMQMessage>> const& cache)
 : mInputsSchema{inputsSchema},
   mCache{cache}
 {

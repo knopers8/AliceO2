@@ -136,8 +136,11 @@ public:
   int getPos(const std::string &name) const;
 
   DataRef getByPos(int pos) const {
-    if (pos*2 >= mCache.size() || pos < 0) {
+    if (pos*2+1 > mCache.size() || pos < 0) {
       throw std::runtime_error("Unknown argument requested at position " + std::to_string(pos));
+    }
+    if (pos > mInputsSchema.size()) {
+      throw std::runtime_error("Unknown schema at position");
     }
     assert(pos >= 0);
     return DataRef{&mInputsSchema[pos].matcher,
