@@ -13,12 +13,12 @@
 #include <vector>
 using namespace o2::framework;
 void customize(std::vector<ConfigParamSpec> &options) {
-  options.push_back(o2::framework::ConfigParamSpec{"anInt", VariantType::Int, 1, {"an int option"}});
-  options.push_back(o2::framework::ConfigParamSpec{"aFloat", VariantType::Float, 2.0f, {"a float option"}});
-  options.push_back(o2::framework::ConfigParamSpec{"aDouble", VariantType::Double, 3., {"a double option"}});
-  options.push_back(o2::framework::ConfigParamSpec{"aString", VariantType::String, "foo", {"a string option"}});
-  options.push_back(o2::framework::ConfigParamSpec{"aBool", VariantType::Bool, true, {"a boolean option"}});
-};
+  options.push_back(ConfigParamSpec{"anInt", VariantType::Int, 1, {"an int option"}});
+  options.push_back(ConfigParamSpec{"aFloat", VariantType::Float, 2.0f, {"a float option"}});
+  options.push_back(ConfigParamSpec{"aDouble", VariantType::Double, 3., {"a double option"}});
+  options.push_back(ConfigParamSpec{"aString", VariantType::String, "foo", {"a string option"}});
+  options.push_back(ConfigParamSpec{"aBool", VariantType::Bool, true, {"a boolean option"}});
+}
 
 void customize(std::vector<CompletionPolicy> &policies) {
   auto matcher = [](DeviceSpec const &device) -> bool {
