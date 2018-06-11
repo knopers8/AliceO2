@@ -8,6 +8,23 @@
 // granted to it by virtue of its status as an Intergovernmental Organization
 // or submit itself to any jurisdiction.
 
+#include "Framework/CompletionPolicy.h"
+#include "Framework/CompletionPolicyHelpers.h"
+#include "Framework/DeviceSpec.h"
+
+using namespace o2::framework;
+
+void customize(std::vector<CompletionPolicy> &policies) {
+
+  auto matcher = [](DeviceSpec const &device) -> bool {
+    return device.name == "Dispatcher0_for_rootQcTask";
+  };
+  auto policy = [](gsl::span<PartRef const> const &inputs) -> CompletionPolicy::CompletionOp {
+    return CompletionPolicy::CompletionOp::Process;
+  };
+  policies.push_back({CompletionPolicy{"process-any", matcher, policy}});
+
+}
 
 #include <iostream>
 #include <boost/algorithm/string.hpp>
@@ -36,6 +53,7 @@ size_t collectionChunkSize = 1000;
 void someDataProducerAlgorithm(ProcessingContext& ctx);
 void someProcessingStageAlgorithm(ProcessingContext& ctx);
 void someSinkAlgorithm(ProcessingContext& ctx);
+
 
 WorkflowSpec defineDataProcessing(ConfigContext const&)
 {
@@ -188,10 +206,10 @@ WorkflowSpec defineDataProcessing(ConfigContext const&)
   };
 
   WorkflowSpec specs{
-    podDataProducer,
-    processingStage,
-    podSink,
-    qcTaskTpc,
+//    podDataProducer,
+//    processingStage,
+//    podSink,
+//    qcTaskTpc,
 
     rootDataProducer,
     rootSink,
