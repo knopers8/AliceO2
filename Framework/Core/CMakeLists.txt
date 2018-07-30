@@ -33,6 +33,7 @@ set(SRCS
     src/DataRelayer.cxx
     src/DataSampling.cxx
     src/DataSamplingConditionRandom.cxx
+    src/DataSamplingConditionFactory.cxx
     src/DataSamplingReadoutAdapter.cxx
     src/DataSourceDevice.cxx
     src/DeviceMetricsInfo.cxx
@@ -136,6 +137,7 @@ set(HEADERS
       include/Framework/CallbackService.h
       include/Framework/DataSampling.h
       include/Framework/DataSamplingCondition.h
+      include/Framework/DataSamplingConditionFactory.h
       include/Framework/DataSamplingReadoutAdapter.h
       include/Framework/DPLBoostSerializer.h
       include/Framework/TableBuilder.h
