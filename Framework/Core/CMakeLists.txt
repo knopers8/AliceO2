@@ -34,6 +34,7 @@ set(SRCS
     src/DataSampling.cxx
     src/DataSamplingConditionRandom.cxx
     src/DataSamplingConditionPayloadSize.cxx
+    src/DataSamplingConditionNConsecutive.cxx
     src/DataSamplingConditionFactory.cxx
     src/DataSamplingReadoutAdapter.cxx
     src/DataSourceDevice.cxx
