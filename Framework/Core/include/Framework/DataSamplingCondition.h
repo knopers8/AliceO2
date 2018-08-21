@@ -37,6 +37,8 @@ class DataSamplingCondition
   virtual void configure(const boost::property_tree::ptree&) = 0;
   /// \brief Makes decision whether to pass a data sample or not.
   virtual bool decide(const o2::framework::DataRef&) = 0;
+
+  virtual uint64_t rnd(uint64_t i) {};
 };
 
 } // namespace framework

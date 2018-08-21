@@ -53,6 +53,10 @@ class DataSamplingConditionNConsecutive : public DataSamplingCondition
     return dpHeader->startTime % mCycleSize < mSamplesNumber;
   }
 
+  uint64_t rnd(uint64_t i) override {
+    return static_cast<uint64_t>(i % mCycleSize < mSamplesNumber);
+  }
+
  private:
   size_t mSamplesNumber;
   size_t mCycleSize;

@@ -251,6 +251,7 @@ o2_define_bucket(
     Core
     Tree
     TreePlayer
+    MathCore
     Net
     MathUtils
     DebugGUI

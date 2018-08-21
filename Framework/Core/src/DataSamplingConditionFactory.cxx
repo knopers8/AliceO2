@@ -27,10 +27,18 @@ std::unique_ptr<DataSamplingCondition> DataSamplingConditionFactory::create(std:
 {
   if (name == "random" || name == "DataSamplingConditionRandom") {
     return createDataSamplingConditionRandom();
+  } else if (name == "bbs" || name == "DataSamplingConditionBBS") {
+    return createDataSamplingConditionBBS();
+  } else if (name == "pcg" || name == "DataSamplingConditionPCG") {
+    return createDataSamplingConditionPCG();
   } else if (name == "payloadSize" || name == "DataSamplingConditionPayloadSize") {
     return createDataSamplingConditionPayloadSize();
   } else if (name == "nConsecutive" || name == "DataSamplingConditionNConsecutive") {
     return createDataSamplingConditionNConsecutive();
+  } else if (name == "hash" || name == "DataSamplingConditionHash") {
+    return createDataSamplingConditionHash();
+  } else if (name == "hashCombine" || name == "DataSamplingConditionHashCombine") {
+    return createDataSamplingConditionHashCombine();
   } else {
     LOG(ERROR) << "DataSamplingCondition '" << name << "' unknown.";
     return nullptr;

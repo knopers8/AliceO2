@@ -11,6 +11,7 @@
 #define BOOST_TEST_MAIN
 #define BOOST_TEST_DYN_LINK
 
+#include <iostream>
 #include <vector>
 #include <boost/test/unit_test.hpp>
 
@@ -21,7 +22,7 @@
 
 using namespace o2::framework;
 using namespace o2::header;
-
+/*
 BOOST_AUTO_TEST_CASE(DataSamplingConditionRandom)
 {
   auto conditionRandom = DataSamplingConditionFactory::create("random");
@@ -74,6 +75,7 @@ BOOST_AUTO_TEST_CASE(DataSamplingConditionPayloadSize)
     BOOST_CHECK_EQUAL(conditionPayloadSize->decide(dr), t.second);
   }
 }
+
 BOOST_AUTO_TEST_CASE(DataSamplingConditionNConsecutive)
 {
   auto conditionNConsecutive = DataSamplingConditionFactory::create("nConsecutive");
@@ -104,4 +106,115 @@ BOOST_AUTO_TEST_CASE(DataSamplingConditionNConsecutive)
     DataRef dr{ nullptr, reinterpret_cast<const char*>(headerStack.data()), nullptr };
     BOOST_CHECK_EQUAL(conditionNConsecutive->decide(dr), t.second);
   }
+}
+
+ */
+
+
+#include <algorithm>
+#include <chrono>
+using namespace std::chrono;
+
+BOOST_AUTO_TEST_CASE(DataSamplingConditionPCG)
+{
+  auto conditionPCG = DataSamplingConditionFactory::create("pcg");
+  BOOST_REQUIRE(conditionPCG);
+
+  boost::property_tree::ptree config;
+  config.put("fraction", 0.5);
+  config.put("seed", 938475231*10);
+  conditionPCG->configure(config);
+
+  uint64_t total = 0;
+  size_t vsize = 10000;
+
+  std::vector<DataProcessingHeader::StartTime> v(vsize);
+  for(DataProcessingHeader::StartTime id = 0; id < vsize; id++) {
+    v[id] = id;
+  }
+  std::random_shuffle(v.begin(), v.end(), [](int i) { return std::rand()%i;});
+
+  steady_clock::time_point timeStart = steady_clock::now();
+  for (auto id : v) {
+//    LOG(INFO) << id;
+    DataProcessingHeader dph{ id, 0 };
+    o2::header::Stack headerStack{ dph };
+    DataRef dr{ nullptr, reinterpret_cast<const char*>(headerStack.data()), nullptr };
+
+    total += conditionPCG->decide(dr);
+  }
+
+  std::cout << "pcg total: " << total << ", "
+            << duration_cast<nanoseconds>(steady_clock::now() - timeStart).count() / vsize << "ns/call" << std::endl;
+
+}
+
+
+#include <algorithm>
+#include <chrono>
+using namespace std::chrono;
+
+BOOST_AUTO_TEST_CASE(DataSamplingConditionHash)
+{
+  auto conditionRandom = DataSamplingConditionFactory::create("hash");
+  BOOST_REQUIRE(conditionRandom);
+
+  // PRNG should behave the same every time and on every machine.
+  // Of course, the test does not cover full range of timesliceIDs.
+//  std::vector<bool> correctDecision{
+//    false, true, false, true, true, false, true, false, false, true, false, true, false, false, false, false, false,
+//      true, false, false, true, true, false, false, true, true, false, false, false, false, true, true, false, false,
+//      true, true, false, false, false, false, false, true, false, false, false, false, false, true, false
+//  };
+  boost::property_tree::ptree config;
+  config.put("fraction", 0.001);
+  config.put("seed", 938475231);
+  conditionRandom->configure(config);
+
+  steady_clock::time_point timeStart = steady_clock::now();
+  size_t vsize = 10000000;
+  int b = 0;
+  for (DataProcessingHeader::StartTime id = 1; id < vsize; id++) {
+    DataProcessingHeader dph{ id, 0 };
+    o2::header::Stack headerStack{ dph };
+    DataRef dr{ nullptr, reinterpret_cast<const char*>(headerStack.data()), nullptr };
+//    BOOST_CHECK_EQUAL(correctDecision[id - 1], conditionRandom->decide(dr));
+//    LOG(INFO) << conditionRandom->decide(dr);
+    b += conditionRandom->decide(dr);
+  }
+  std::cout << "hash total: " << b << ", "
+            << duration_cast<nanoseconds>(steady_clock::now() - timeStart).count() / vsize << "ns/call" << std::endl;
+}
+
+
+BOOST_AUTO_TEST_CASE(DataSamplingConditionHashCombine)
+{
+  auto conditionRandom = DataSamplingConditionFactory::create("hashCombine");
+  BOOST_REQUIRE(conditionRandom);
+
+  // PRNG should behave the same every time and on every machine.
+  // Of course, the test does not cover full range of timesliceIDs.
+//  std::vector<bool> correctDecision{
+//    false, true, false, true, true, false, true, false, false, true, false, true, false, false, false, false, false,
+//      true, false, false, true, true, false, false, true, true, false, false, false, false, true, true, false, false,
+//      true, true, false, false, false, false, false, true, false, false, false, false, false, true, false
+//  };
+  boost::property_tree::ptree config;
+  config.put("fraction", 0.0001);
+  config.put("seed", 123123123);
+  conditionRandom->configure(config);
+
+  steady_clock::time_point timeStart = steady_clock::now();
+  size_t vsize = 10000000;
+  int b = 0;
+  for (DataProcessingHeader::StartTime id = 1; id < vsize; id++) {
+    DataProcessingHeader dph{ id, 0 };
+    o2::header::Stack headerStack{ dph };
+    DataRef dr{ nullptr, reinterpret_cast<const char*>(headerStack.data()), nullptr };
+//    BOOST_CHECK_EQUAL(correctDecision[id - 1], conditionRandom->decide(dr));
+//    LOG(INFO) << conditionRandom->decide(dr);
+    b += conditionRandom->decide(dr);
+  }
+  std::cout << "hashCombine total: " << b << ", "
+            << duration_cast<nanoseconds>(steady_clock::now() - timeStart).count() / vsize << "ns/call" << std::endl;
 }

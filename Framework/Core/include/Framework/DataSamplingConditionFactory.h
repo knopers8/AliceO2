@@ -34,10 +34,18 @@ class DataSamplingConditionFactory
   // inside particular DataSamplingCondition*.cxx files.
   /// \brief Getter for DataSamplingConditionRandom
   static std::unique_ptr<DataSamplingCondition> createDataSamplingConditionRandom();
+  /// \brief Getter for DataSamplingConditionBBS
+  static std::unique_ptr<DataSamplingCondition> createDataSamplingConditionBBS();
+  /// \brief Getter for DataSamplingConditionPCG
+  static std::unique_ptr<DataSamplingCondition> createDataSamplingConditionPCG();
   /// \brief Getter for DataSamplingConditionPayloadSize
   static std::unique_ptr<DataSamplingCondition> createDataSamplingConditionPayloadSize();
   /// \brief Getter for DataSamplingConditionNConsecutive
   static std::unique_ptr<DataSamplingCondition> createDataSamplingConditionNConsecutive();
+  /// \brief Getter for DataSamplingConditionHash
+  static std::unique_ptr<DataSamplingCondition> createDataSamplingConditionHash();
+  /// \brief Getter for DataSamplingConditionHashCombine
+  static std::unique_ptr<DataSamplingCondition> createDataSamplingConditionHashCombine();
 
 };
 

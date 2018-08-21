@@ -33,8 +33,12 @@ set(SRCS
     src/DataRelayer.cxx
     src/DataSampling.cxx
     src/DataSamplingConditionRandom.cxx
+    src/DataSamplingConditionBBS.cxx
+    src/DataSamplingConditionPCG.cxx
     src/DataSamplingConditionPayloadSize.cxx
     src/DataSamplingConditionNConsecutive.cxx
+    src/DataSamplingConditionHash.cxx
+    src/DataSamplingConditionHashCombine.cxx
     src/DataSamplingConditionFactory.cxx
     src/DataSamplingReadoutAdapter.cxx
     src/DataSourceDevice.cxx
