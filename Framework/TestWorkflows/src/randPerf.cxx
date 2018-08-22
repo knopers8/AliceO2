@@ -175,8 +175,9 @@ int main(int argc, char *argv[]) {
   auto cond = DataSamplingConditionFactory::create(prng);
   uint64_t i = 0;
   while (cond) {
-    if (prng == "pcg") {
+    if (prng == "pcg" || prng.substr(0,7) == "TRandom") {
       uint32_t rnd = cond->rnd(i);
+//      std::cout << rnd << std::endl;
       write(1, &rnd, sizeof(uint32_t));
     } else if (prng == "hash") {
       uint64_t rnd = cond->rnd(i);

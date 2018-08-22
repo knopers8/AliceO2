@@ -39,6 +39,12 @@ std::unique_ptr<DataSamplingCondition> DataSamplingConditionFactory::create(std:
     return createDataSamplingConditionHash();
   } else if (name == "hashCombine" || name == "DataSamplingConditionHashCombine") {
     return createDataSamplingConditionHashCombine();
+  } else if (name == "TRandom1" || name == "DataSamplingConditionTRandom1") {
+    return createDataSamplingConditionTRandom1();
+  } else if (name == "TRandom2" || name == "DataSamplingConditionTRandom2") {
+    return createDataSamplingConditionTRandom2();
+  } else if (name == "TRandom3" || name == "DataSamplingConditionTRandom3") {
+    return createDataSamplingConditionTRandom3();
   } else {
     LOG(ERROR) << "DataSamplingCondition '" << name << "' unknown.";
     return nullptr;

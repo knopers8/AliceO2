@@ -33,6 +33,9 @@ set(SRCS
     src/DataRelayer.cxx
     src/DataSampling.cxx
     src/DataSamplingConditionRandom.cxx
+    src/DataSamplingConditionTRandom1.cxx
+    src/DataSamplingConditionTRandom2.cxx
+    src/DataSamplingConditionTRandom3.cxx
     src/DataSamplingConditionBBS.cxx
     src/DataSamplingConditionPCG.cxx
     src/DataSamplingConditionPayloadSize.cxx
@@ -49,6 +52,7 @@ set(SRCS
     src/DispatcherDPL.cxx
     src/DispatcherFairMQ.cxx
     src/DispatcherFlpProto.cxx
+#    src/gmpbbs.c
     src/DriverControl.cxx
     src/DriverInfo.cxx
     src/FairOptionsRetriever.cxx

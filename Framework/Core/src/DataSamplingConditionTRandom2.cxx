@@ -8,7 +8,7 @@
 // granted to it by virtue of its status as an Intergovernmental Organization
 // or submit itself to any jurisdiction.
 
-/// \file DataSamplingConditionPCG.cxx
+/// \file DataSamplingConditionRandom.cxx
 /// \brief Implementation of random DataSamplingCondition
 ///
 /// \author Piotr Konopka, piotr.jan.konopka@cern.ch
@@ -17,31 +17,34 @@
 #include "Framework/DataSamplingConditionFactory.h"
 #include "Framework/DataProcessingHeader.h"
 
-#include "pcg_random.h"
+#include <TRandom2.h>
 
 namespace o2
 {
 namespace framework
 {
 
+// todo: choose the best PRNG (TRandom3 is fast, but i am not sure about its statistical soundness and behaviour with
+// very small percents) or use completely different decision mechanism (map or formula f(timeslice) -> {0,1})
+// todo: consider using run number as a seed
+
 using namespace o2::header;
 
 /// \brief A DataSamplingCondition which makes decisions randomly, but with determinism.
-class DataSamplingConditionPCG : public DataSamplingCondition
+class DataSamplingConditionTRandom2 : public DataSamplingCondition
 {
 
- public:
+  public:
   /// \brief Constructor.
-  DataSamplingConditionPCG() : DataSamplingCondition(), mSeed(static_cast<uint64_t>(time(nullptr))), mFraction(0.0), mGenerator(), mCurrentTimesliceID (){};
+  DataSamplingConditionTRandom2() : DataSamplingCondition(), mSeed(static_cast<uint64_t>(time(nullptr))), mFraction(0.0), mGenerator(0){};
   /// \brief Default destructor
-  ~DataSamplingConditionPCG() = default;
+  ~DataSamplingConditionTRandom2() = default;
 
   /// \brief Reads 'fraction' parameter (type double, between 0 and 1) and seed (int).
   void configure(const boost::property_tree::ptree& cfg) override
   {
     mFraction = cfg.get<double>("fraction");
-    mSeed = cfg.get<uint64_t>("seed");
-    mGenerator.seed(mSeed);
+    mSeed = cfg.get<int>("seed");
   };
   /// \brief Makes pseudo-random, deterministic decision based on TimesliceID.
   /// The reason behind using TimesliceID is to ensure, that data of the same events is sampled even on different FLPs.
@@ -50,39 +53,23 @@ class DataSamplingConditionPCG : public DataSamplingCondition
     const auto* dpHeader = get<DataProcessingHeader*>(dataRef.header);
     assert(dpHeader);
 
-    int64_t diff = dpHeader->startTime - mCurrentTimesliceID;
-    if (diff > 0) {
-      mGenerator.advance(static_cast<uint64_t>(diff));
-    } else if (diff < 0) {
-      mGenerator.backstep(static_cast<uint64_t>(-diff));
-    } else if (diff == -1){
-      //return previous result?
-    }
-    mCurrentTimesliceID = dpHeader->startTime + 1;
-//     make sure it works EACH time for 0% and 100% (at least for 100%)
-
-//    auto rnd = mGenerator();
-//    LOG(INFO) << "---------";
-//    LOG(INFO) << rnd;
-    // todo: division by integer might be faster
-    return static_cast<uint32_t>(mGenerator()) < mFraction*std::numeric_limits<uint32_t>::max();
-//    return static_cast<bool>(mGenerator.Binomial(1, mFraction));
+    mGenerator.SetSeed(dpHeader->startTime * mSeed);
+    return static_cast<bool>(mGenerator.Binomial(1, mFraction));
   }
 
   uint64_t rnd(uint64_t i) override {
-    return mGenerator();
+    mGenerator.SetSeed(i * mSeed);
+    return mGenerator.Integer(std::numeric_limits<uint32_t>::max());
   }
-
   private:
   uint64_t mSeed;
   double mFraction;
-  pcg32_fast mGenerator;
-  DataProcessingHeader::StartTime mCurrentTimesliceID;
+  TRandom2 mGenerator;
 };
 
-std::unique_ptr<DataSamplingCondition> DataSamplingConditionFactory::createDataSamplingConditionPCG()
+std::unique_ptr<DataSamplingCondition> DataSamplingConditionFactory::createDataSamplingConditionTRandom2()
 {
-  return std::make_unique<DataSamplingConditionPCG>();
+  return std::make_unique<DataSamplingConditionTRandom2>();
 }
 
 } // namespace framework
