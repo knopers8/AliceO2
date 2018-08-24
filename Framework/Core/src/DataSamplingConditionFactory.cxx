@@ -45,6 +45,8 @@ std::unique_ptr<DataSamplingCondition> DataSamplingConditionFactory::create(std:
     return createDataSamplingConditionTRandom2();
   } else if (name == "TRandom3" || name == "DataSamplingConditionTRandom3") {
     return createDataSamplingConditionTRandom3();
+  } else if (name == "dummy" || name == "DataSamplingConditionDummy") {
+    return createDataSamplingConditionDummy();
   } else {
     LOG(ERROR) << "DataSamplingCondition '" << name << "' unknown.";
     return nullptr;

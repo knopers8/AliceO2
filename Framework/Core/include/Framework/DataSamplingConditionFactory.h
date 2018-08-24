@@ -46,12 +46,14 @@ class DataSamplingConditionFactory
   static std::unique_ptr<DataSamplingCondition> createDataSamplingConditionHash();
   /// \brief Getter for DataSamplingConditionHashCombine
   static std::unique_ptr<DataSamplingCondition> createDataSamplingConditionHashCombine();
-  /// \brief Getter for DataSamplingConditionRandom
+  /// \brief Getter for DataSamplingConditionTRandom1
   static std::unique_ptr<DataSamplingCondition> createDataSamplingConditionTRandom1();
-  /// \brief Getter for DataSamplingConditionRandom
+  /// \brief Getter for DataSamplingConditionTRandom2
   static std::unique_ptr<DataSamplingCondition> createDataSamplingConditionTRandom2();
-  /// \brief Getter for DataSamplingConditionRandom
+  /// \brief Getter for DataSamplingConditionTRandom3
   static std::unique_ptr<DataSamplingCondition> createDataSamplingConditionTRandom3();
+  /// \brief Getter for DataSamplingConditionDummy
+  static std::unique_ptr<DataSamplingCondition> createDataSamplingConditionDummy();
 
 
 };

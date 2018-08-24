@@ -42,6 +42,7 @@ set(SRCS
     src/DataSamplingConditionNConsecutive.cxx
     src/DataSamplingConditionHash.cxx
     src/DataSamplingConditionHashCombine.cxx
+    src/DataSamplingConditionDummy.cxx
     src/DataSamplingConditionFactory.cxx
     src/DataSamplingReadoutAdapter.cxx
     src/DataSourceDevice.cxx
