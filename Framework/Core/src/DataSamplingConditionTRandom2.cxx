@@ -44,7 +44,7 @@ class DataSamplingConditionTRandom2 : public DataSamplingCondition
   void configure(const boost::property_tree::ptree& cfg) override
   {
     mFraction = cfg.get<double>("fraction");
-    mSeed = cfg.get<int>("seed");
+    mSeed = cfg.get<uint64_t>("seed");
   };
   /// \brief Makes pseudo-random, deterministic decision based on TimesliceID.
   /// The reason behind using TimesliceID is to ensure, that data of the same events is sampled even on different FLPs.
