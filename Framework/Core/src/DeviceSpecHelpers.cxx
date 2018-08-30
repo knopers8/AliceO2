@@ -22,6 +22,8 @@
 #include "Framework/ConfigParamsHelper.h"
 #include "Framework/DeviceControl.h"
 #include "Framework/DeviceSpec.h"
+#include "Framework/Lifetime.h"
+#include "Framework/LifetimeHelpers.h"
 #include "Framework/OutputRoute.h"
 #include "Framework/WorkflowSpec.h"
 
@@ -353,6 +355,36 @@ void DeviceSpecHelpers::processInEdgeActions(std::vector<DeviceSpec>& devices,
     route.matcher = consumer.inputs[edge.consumerInputIndex];
     route.sourceChannel = consumerDevice.inputChannels[ci].name;
     route.timeslice = edge.producerTimeIndex;
+    switch (consumer.inputs[edge.consumerInputIndex].lifetime) {
+      case Lifetime::Timeframe:
+        route.danglingConfigurator = [](ConfigParamRegistry const&) { return LifetimeHelpers::expireNever(); };
+        route.expirationConfigurator = [](ConfigParamRegistry const&) { return LifetimeHelpers::doNothing(); };
+        break;
+      case Lifetime::Condition:
+        route.danglingConfigurator = [](ConfigParamRegistry const&) { return LifetimeHelpers::expireAlways(); };
+        route.expirationConfigurator = [route](ConfigParamRegistry const&) {
+          std::string prefix = std::string{"/"} + route.matcher.origin.str + "/" + route.matcher.description.str;
+          return LifetimeHelpers::fetchFromCCDBCache(prefix);
+        };
+        break;
+      case Lifetime::QA:
+        route.danglingConfigurator = [](ConfigParamRegistry const&) { return LifetimeHelpers::expireAlways(); };
+        route.expirationConfigurator = [](ConfigParamRegistry const&) { return LifetimeHelpers::fetchFromQARegistry(); };
+        break;
+      case Lifetime::Timer:
+        route.danglingConfigurator = [route](ConfigParamRegistry const& options) {
+          std::string rateName = std::string{"period-"} + route.matcher.origin.str
+                               + "-" + route.matcher.description.str;
+          auto period = options.get<int>(rateName.c_str());
+          return LifetimeHelpers::expireTimed(std::chrono::milliseconds(period));
+        };
+        route.expirationConfigurator =  [route](ConfigParamRegistry const&){ return LifetimeHelpers::enumerate(route); };
+        break;
+      case Lifetime::Transient:
+        route.danglingConfigurator = [](ConfigParamRegistry const&) { return LifetimeHelpers::expireAlways(); };
+        route.expirationConfigurator = [](ConfigParamRegistry const&) { return LifetimeHelpers::fetchFromObjectRegistry(); };
+        break;
+    }
     consumerDevice.inputs.push_back(route);
   };
 

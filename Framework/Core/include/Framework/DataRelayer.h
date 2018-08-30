@@ -50,6 +50,12 @@ public:
               std::vector<ForwardRoute> const&,
               monitoring::Monitoring&);
 
+  /// This invokes the appropriate `InputRoute::danglingChecker` on every
+  /// entry in the cache and if it returns true, it creates a new
+  /// cache entry by invoking the associated `InputRoute::expirationHandler`.
+  void processDanglingInputs(std::vector<ExpirationHandler> const&,
+                             ServiceRegistry& context);
+
   /// This is used to ask for relaying a given (header,payload) pair.
   /// Notice that we expect that the header is an O2 Header Stack
   /// with a DataProcessingHeader inside so that we can assess time.
@@ -81,8 +87,8 @@ public:
   /// Tune the maximum number of in flight timeslices this can handle.
   void setPipelineLength(size_t s);
 private:
-  std::vector<InputRoute> mInputRoutes;
-  std::vector<ForwardRoute> mForwardRoutes;
+  std::vector<InputRoute> const& mInputRoutes;
+  std::vector<ForwardRoute> const& mForwardRoutes;
   monitoring::Monitoring& mMetrics;
 
   /// This is the actual cache of all the parts in flight. 
