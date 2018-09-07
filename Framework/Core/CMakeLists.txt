@@ -202,6 +202,7 @@ set(TEST_SRCS
       test/test_BoostOptionsRetriever.cxx
       test/test_CompletionPolicy.cxx
       test/test_ChannelSpecHelpers.cxx
+      test/test_DanglingOutputs.cxx
       test/test_DataRelayer.cxx
       test/test_DataSampling.cxx
       test/test_DataSamplingCondition.cxx
