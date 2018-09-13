@@ -215,7 +215,8 @@ bool DataProcessingDevice::handleData(FairMQParts& parts)
   return true;
 }
 
-bool DataProcessingDevice::tryDispatchComputation() {
+bool DataProcessingDevice::tryDispatchComputation()
+{
   // This is the actual hidden state for the outer loop. In case we decide we
   // want to support multithreaded dispatching of operations, I can simply
   // move these to some thread local store and the rest of the lambdas
@@ -350,8 +351,7 @@ bool DataProcessingDevice::tryDispatchComputation() {
   // the inputs which are shared between this device and others
   // to the next one in the daisy chain.
   // FIXME: do it in a smarter way than O(N^2)
-  auto forwardInputs = [&reportError,&forwards, &device, &currentSetOfInputs]
-                       (int timeslice, InputRecord &record) {
+  auto forwardInputs = [&reportError, &forwards, &device, &currentSetOfInputs](int timeslice, InputRecord& record) {
     assert(record.size()*2 == currentSetOfInputs.size());
     LOG(DEBUG) << "FORWARDING:START:" << timeslice;
     for (size_t ii = 0, ie = record.size(); ii < ie; ++ii) {
