@@ -114,6 +114,12 @@ O2_GENERATE_EXECUTABLE(
 )
 Install(FILES dataSamplingFullChainConfig.json DESTINATION share/config/)
 
+O2_GENERATE_EXECUTABLE(
+  EXE_NAME "timersTest"
+  SOURCES "src/timersTest.cxx"
+  MODULE_LIBRARY_NAME ${LIBRARY_NAME}
+  BUCKET_NAME ${MODULE_BUCKET_NAME}
+)
 
 
 # These should be enabled only if one uses the full O2 default
