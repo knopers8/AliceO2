@@ -35,6 +35,7 @@ void customize(std::vector<CompletionPolicy>& policies)
         }
 
         const DataHeader* inputHeader = get<DataHeader*>(input.header->GetData());
+        assert(inputHeader);
         if (!strncmp(inputHeader->dataDescription.str, "TIMER", 5)) {
           timerPresent = true;
         } else {
@@ -44,10 +45,10 @@ void customize(std::vector<CompletionPolicy>& policies)
 
       if (dataInputsPresent == inputs.size() - 1) {
         // both data inputs present and maybe timer => consume data, execute periodic procedure if timer is present
-        return CompletionPolicy::CompletionOp::Consume;
-      } else if (timerPresent) {
-        // only timer and possibly some partial data => execute periodic procedure, wait for the rest of data
         return CompletionPolicy::CompletionOp::Process;
+//      } else if (timerPresent) {
+//         only timer and possibly some partial data => execute periodic procedure, wait for the rest of data
+//        return CompletionPolicy::CompletionOp::Consume;
       } else {
         // partial data => wait for the rest
         return CompletionPolicy::CompletionOp::Wait;
@@ -60,6 +61,7 @@ void customize(std::vector<CompletionPolicy>& policies)
 
 #include "Framework/runDataProcessing.h"
 #include <chrono>
+#include <Framework/DataProcessingHeader.h>
 
 using namespace std::chrono;
 
@@ -75,10 +77,11 @@ WorkflowSpec defineDataProcessing(ConfigContext const&)
     AlgorithmSpec{
       (AlgorithmSpec::InitCallback) [](InitContext& ic) {
         srand(getpid());
-        return (AlgorithmSpec::ProcessCallback) [](ProcessingContext& ctx) {
+        auto num = std::make_shared<int>(0);
+        return (AlgorithmSpec::ProcessCallback) [num](ProcessingContext& ctx) {
           sleep(rand() % 2);
           auto data1 = ctx.outputs().make<int>(OutputRef{ "output1" }, 1);
-          data1[0] = 1;
+          data1[0] = (*num)++;
         };
       }
     }
@@ -93,10 +96,11 @@ WorkflowSpec defineDataProcessing(ConfigContext const&)
     AlgorithmSpec{
       (AlgorithmSpec::InitCallback) [](InitContext& ic) {
         srand(getpid());
-        return (AlgorithmSpec::ProcessCallback) [](ProcessingContext& ctx) {
+        auto num = std::make_shared<int>(0);
+        return (AlgorithmSpec::ProcessCallback) [num](ProcessingContext& ctx) {
           sleep(rand() % 2);
           auto data2 = ctx.outputs().make<int>(OutputRef{ "output2" }, 1);
-          data2[0] = 1;
+          data2[0] = (*num)++;
         };
       }
     }
@@ -119,7 +123,7 @@ WorkflowSpec defineDataProcessing(ConfigContext const&)
         return (AlgorithmSpec::ProcessCallback) [sum](ProcessingContext& ctx) {
 
           if (ctx.inputs().isValid("data1") && ctx.inputs().isValid("data2")) {
-            LOG(INFO) << "data input";
+            LOG(INFO) << "data input: " << ctx.inputs().get<int>("data1") << " " << ctx.inputs().get<int>("data2");
             *sum += ctx.inputs().get<int>("data1");
             *sum += ctx.inputs().get<int>("data2");
           }
@@ -158,11 +162,43 @@ WorkflowSpec defineDataProcessing(ConfigContext const&)
     }
   };
 
+  DataProcessorSpec sink{
+    "sink",
+    Inputs{
+      { "data1", "TST", "DATA1" },
+      { "data2", "TST", "DATA2" }
+    },
+    Outputs{},
+    AlgorithmSpec{
+      (AlgorithmSpec::InitCallback) [](InitContext& ictx) {
+        return (AlgorithmSpec::ProcessCallback) [](ProcessingContext& ctx) {
+
+          LOG(INFO) << "=== sink ===";
+          if (ctx.inputs().isValid("data1") ){
+            auto d = ctx.inputs().get("data1");
+            const auto* dpHeader = get<DataProcessingHeader*>(d.header);
+            assert(dpHeader);
+            LOG(INFO) << "The data1 is: " << ctx.inputs().get<int>("data1") << ", tid: " << dpHeader->startTime;
+          }
+          if (ctx.inputs().isValid("data2")) {
+            auto d = ctx.inputs().get("data2");
+            const auto* dpHeader = get<DataProcessingHeader*>(d.header);
+            assert(dpHeader);
+            LOG(INFO) << "The data2 is: " << ctx.inputs().get<int>("data2") << ", tid: " << dpHeader->startTime;
+          }
+        };
+      }
+    }
+  };
+
+
+
   WorkflowSpec specs{
     producer1,
     producer2,
     accumulator,
-    printer
+    printer,
+    sink
   };
 
   return specs;
