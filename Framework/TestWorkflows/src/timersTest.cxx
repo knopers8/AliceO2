@@ -45,10 +45,13 @@ void customize(std::vector<CompletionPolicy>& policies)
 
       if (dataInputsPresent == inputs.size() - 1) {
         // both data inputs present and maybe timer => consume data, execute periodic procedure if timer is present
+        return CompletionPolicy::CompletionOp::Consume;
+      } else if (timerPresent) {
+//         only timer and no data => execute periodic procedure, wait for the rest of data
+        if (dataInputsPresent) {
+          LOG(WARN) << "DATA INPUTS PRESENT IN THIS TIMESLICE, LOSING DATA PROBABLY";
+        }
         return CompletionPolicy::CompletionOp::Process;
-//      } else if (timerPresent) {
-//         only timer and possibly some partial data => execute periodic procedure, wait for the rest of data
-//        return CompletionPolicy::CompletionOp::Consume;
       } else {
         // partial data => wait for the rest
         return CompletionPolicy::CompletionOp::Wait;
@@ -62,6 +65,8 @@ void customize(std::vector<CompletionPolicy>& policies)
 #include "Framework/runDataProcessing.h"
 #include <chrono>
 #include <Framework/DataProcessingHeader.h>
+#include <Framework/CallbackService.h>
+#include <Framework/TimesliceIndex.h>
 
 using namespace std::chrono;
 
@@ -120,6 +125,23 @@ WorkflowSpec defineDataProcessing(ConfigContext const&)
       (AlgorithmSpec::InitCallback) [](InitContext& ictx) {
 
         std::shared_ptr<int> sum = std::make_shared<int>(0);
+
+        // note that some data will be lost anyway, when timeslice	is booked on existing partial data. we need some
+        // mechanism for preventing that - either separate 'cache' for timers or timesliceIndex API call for overbooking
+        // only the obsolete timeslices
+        auto bookTimesliceCallback = [&timesliceIndex = ictx.services().get<TimesliceIndex>(),
+          time = std::make_shared<steady_clock::time_point>(steady_clock::now())]() {
+          auto timeNow = steady_clock::now();
+          static TimesliceId i{0};
+          if (duration_cast<milliseconds>(timeNow - *time).count() > 5000 ) {
+            timesliceIndex.bookTimeslice(i);
+            i.value++;
+//            LOG(INFO) << "i.value " << i.value << ", timeNow " << duration_cast<milliseconds>(steady_clock::now().time_since_epoch()).count();
+            *time = timeNow;
+          }
+        };
+
+        ictx.services().get<CallbackService>().set(CallbackService::Id::ClockTick, bookTimesliceCallback);
         return (AlgorithmSpec::ProcessCallback) [sum](ProcessingContext& ctx) {
 
           if (ctx.inputs().isValid("data1") && ctx.inputs().isValid("data2")) {
