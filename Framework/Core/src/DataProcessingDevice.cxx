@@ -7,6 +7,7 @@
 // In applying this license CERN does not waive the privileges and immunities
 // granted to it by virtue of its status as an Intergovernmental Organization
 // or submit itself to any jurisdiction.
+#include "DataProcessingStatus.h"
 #include "Framework/DataProcessingDevice.h"
 #include "Framework/ChannelMatching.h"
 #include "Framework/DataProcessingHeader.h"
@@ -33,6 +34,7 @@ using Monitoring = o2::monitoring::Monitoring;
 using DataHeader = o2::header::DataHeader;
 
 constexpr unsigned int MONITORING_QUEUE_SIZE = 100;
+constexpr unsigned int MIN_RATE_LOGGING = 60;
 
 namespace o2
 {
@@ -90,6 +92,15 @@ DataProcessingDevice::DataProcessingDevice(DeviceSpec const& spec, ServiceRegist
 /// * Invoke the actual init callback, which returns the processing callback.
 void DataProcessingDevice::Init() {
   LOG(DEBUG) << "DataProcessingDevice::InitTask::START";
+  // For some reason passing rateLogging does not work anymore. 
+  // This makes sure we never have more than one notification per minute.
+  for (auto& x : fChannels) {
+    for (auto& c : x.second) {
+      if (c.GetRateLogging() < MIN_RATE_LOGGING) {
+        c.UpdateRateLogging(MIN_RATE_LOGGING);
+      }
+    }
+  }
   auto optionsRetriever(std::make_unique<FairOptionsRetriever>(GetConfig()));
   mConfigRegistry = std::move(std::make_unique<ConfigParamRegistry>(std::move(optionsRetriever)));
 
@@ -158,10 +169,10 @@ bool DataProcessingDevice::handleData(FairMQParts& parts)
   // does not need to know about the whole class state, but I can
   // fine grain control what is exposed at each state.
   auto& monitoringService = mServiceRegistry.get<Monitoring>();
-  monitoringService.send({ 1, "dpl/in_handle_data" });
+  monitoringService.send({ DataProcessingStatus::IN_DPL_WRAPPER, "dpl/in_handle_data" });
   ScopedExit metricFlusher([&monitoringService] {
-      monitoringService.send({ 1, "dpl/in_handle_data"});
-      monitoringService.send({ 0, "dpl/in_handle_data"});
+      monitoringService.send({ DataProcessingStatus::IN_DPL_WRAPPER, "dpl/in_handle_data"});
+      monitoringService.send({ DataProcessingStatus::IN_FAIRMQ, "dpl/in_handle_data"});
       monitoringService.flushBuffer(); });
 
   auto& device = *this;
@@ -276,10 +287,10 @@ bool DataProcessingDevice::tryDispatchComputation()
   // fine grain control what is exposed at each state.
   // FIXME: I should use a different id for this state.
   auto& monitoringService = mServiceRegistry.get<Monitoring>();
-  monitoringService.send({ 1, "dpl/in_handle_data" });
+  monitoringService.send({ DataProcessingStatus::IN_DPL_WRAPPER, "dpl/in_handle_data" });
   ScopedExit metricFlusher([&monitoringService] {
-      monitoringService.send({ 1, "dpl/in_handle_data"});
-      monitoringService.send({ 0, "dpl/in_handle_data"});
+      monitoringService.send({ DataProcessingStatus::IN_DPL_WRAPPER, "dpl/in_handle_data"});
+      monitoringService.send({ DataProcessingStatus::IN_FAIRMQ, "dpl/in_handle_data"});
       monitoringService.flushBuffer(); });
 
   auto reportError = [&device](const char* message) {
@@ -331,18 +342,18 @@ bool DataProcessingDevice::tryDispatchComputation()
       LOG(DEBUG) << "PROCESSING:START:" << slot.index;
       monitoringService.send({ processingCount++, "dpl/stateful_process_count" });
       ProcessingContext processContext{record, serviceRegistry, allocator};
-      monitoringService.send({ 2, "dpl/in_handle_data" });
+      monitoringService.send({ DataProcessingStatus::IN_DPL_STATEFUL_CALLBACK, "dpl/in_handle_data" });
       statefulProcess(processContext);
-      monitoringService.send({ 1, "dpl/in_handle_data" });
+      monitoringService.send({ DataProcessingStatus::IN_DPL_WRAPPER, "dpl/in_handle_data" });
       LOG(DEBUG) << "PROCESSING:END:" << slot.index;
     }
     if (statelessProcess) {
       LOG(DEBUG) << "PROCESSING:START:" << slot.index;
       monitoringService.send({ processingCount++, "dpl/stateless_process_count" });
       ProcessingContext processContext{record, serviceRegistry, allocator};
-      monitoringService.send({ 2, "dpl/in_handle_data" });
+      monitoringService.send({ DataProcessingStatus::IN_DPL_STATELESS_CALLBACK, "dpl/in_handle_data" });
       statelessProcess(processContext);
-      monitoringService.send({ 1, "dpl/in_handle_data" });
+      monitoringService.send({ DataProcessingStatus::IN_DPL_WRAPPER, "dpl/in_handle_data" });
       LOG(DEBUG) << "PROCESSING:END:" << slot.index;
     }
 
@@ -355,14 +366,14 @@ bool DataProcessingDevice::tryDispatchComputation()
 
   // Error handling means printing the error and updating the metric
   auto errorHandling = [&errorCallback, &monitoringService, &serviceRegistry](std::exception& e, InputRecord& record) {
-    monitoringService.send({ 3, "dpl/in_handle_data" });
+    monitoringService.send({ DataProcessingStatus::IN_DPL_ERROR_CALLBACK, "dpl/in_handle_data" });
     LOG(ERROR) << "Exception caught: " << e.what() << std::endl;
     if (errorCallback) {
       monitoringService.send({ 1, "error" });
       ErrorContext errorContext{record, serviceRegistry, e};
       errorCallback(errorContext);
     }
-    monitoringService.send({ 1, "dpl/in_handle_data" });
+    monitoringService.send({ DataProcessingStatus::IN_DPL_WRAPPER, "dpl/in_handle_data" });
   };
 
   // I need a preparation step which gets the current timeslice id and

@@ -78,18 +78,36 @@ bool Detector::ProcessHits(FairVolume* v)
   bool amRegion = false;
   const TString cIdSensDr = "J";
   const TString cIdSensAm = "K";
-  TString cIdCurrent = fMC->CurrentVolName();
-  // LOG(DEBUG) << "TRD::Detector::ProcessHits() \t cIdCurrent = " << cIdCurrent;
+  const TString cIdCurrent = fMC->CurrentVolName();
   if (cIdCurrent[1] == cIdSensDr) {
     drRegion = true;
   }
-  if (cIdCurrent[2] == cIdSensAm) {
+  if (cIdCurrent[1] == cIdSensAm) {
     amRegion = true;
   }
-
   if (!drRegion && !amRegion) {
     return false;
   }
+
+  // Determine the dectector number
+  int sector, det;
+  // The plane number and chamber number
+  char cIdChamber[3];
+  cIdChamber[0] = cIdCurrent[2];
+  cIdChamber[1] = cIdCurrent[3];
+  cIdChamber[2] = 0;
+  // The det-sec number (0 – 29)
+  const int idChamber = mGeom->getDetectorSec(atoi(cIdChamber));
+  // The sector number (0 - 17), according to the standard coordinate system
+  TString cIdPath = fMC->CurrentVolPath();
+  char cIdSector[3];
+  cIdSector[0] = cIdPath[21];
+  cIdSector[1] = cIdPath[22];
+  cIdSector[2] = 0;
+  sector = atoi(cIdSector);
+  // The detector number (0 – 539)
+  det = mGeom->getDetector(mGeom->getLayer(idChamber),
+                           mGeom->getStack(idChamber), sector);
 
   // 0: InFlight 1: Entering 2: Exiting
   int trkStat = 0;
@@ -121,7 +139,7 @@ bool Detector::ProcessHits(FairVolume* v)
   }
   // Calculate the charge according to GEANT Edep
   // Create a new dEdx hit
-  const double enDep = fMC->Edep();
+  const double enDep = TMath::Max(fMC->Edep(), 0.0) * 1.0e+9;
   // Store those hits with enDep bigger than the ionization potential of the gas mixture for in-flight tracks
   // or store hits of tracks that are entering or exiting
   if ((enDep > mWion) || trkStat) {
@@ -130,8 +148,7 @@ bool Detector::ProcessHits(FairVolume* v)
     double time = fMC->TrackTime() * 1e9;
     o2::Data::Stack* stack = (o2::Data::Stack*)fMC->GetStack();
     const int trackID = stack->GetCurrentTrackNumber();
-    const int sensID = v->getMCid();
-    addHit(x, y, z, time, enDep, trackID, sensID);
+    addHit(x, y, z, time, enDep, trackID, det);
     stack->addHit(GetDetId());
     return true;
   }

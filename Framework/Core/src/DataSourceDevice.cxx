@@ -17,6 +17,7 @@
 #include "Framework/FairOptionsRetriever.h"
 #include "Framework/FairMQDeviceProxy.h"
 #include "Framework/DataProcessingHeader.h"
+#include "DataProcessingStatus.h"
 #include "Framework/CallbackService.h"
 #include "ScopedExit.h"
 #include <Monitoring/Monitoring.h>
@@ -58,6 +59,15 @@ DataSourceDevice::DataSourceDevice(const DeviceSpec& spec, ServiceRegistry& regi
 void DataSourceDevice::Init() {
   LOG(DEBUG) << "DataSourceDevice::InitTask::START\n";
   LOG(DEBUG) << "Init thread" << pthread_self();
+  // For some reason passing rateLogging does not work anymore.
+  // This makes sure the maximum rate is once per minute.
+  for (auto& x : fChannels) {
+    for (auto& c : x.second) {
+      if (c.GetRateLogging() < 60) {
+        c.UpdateRateLogging(60);
+      }
+    }
+  }
   std::unique_ptr<ParamRetriever> retriever{new FairOptionsRetriever(GetConfig())};
   mConfigRegistry = std::move(std::make_unique<ConfigParamRegistry>(std::move(retriever)));
   if (mInit) {
@@ -78,10 +88,10 @@ void DataSourceDevice::Reset() { mServiceRegistry.get<CallbackService>()(Callbac
 
 bool DataSourceDevice::ConditionalRun() {
   auto& monitoring = mServiceRegistry.get<o2::monitoring::Monitoring>();
-  monitoring.send({ 1, "dpl/in_handle_data" });
+  monitoring.send({ DataProcessingStatus::IN_DPL_WRAPPER, "dpl/in_handle_data" });
   ScopedExit metricFlusher([&monitoring] {
-      monitoring.send({ 1, "dpl/in_handle_data" });
-      monitoring.send({ 0, "dpl/in_handle_data" });
+      monitoring.send({ DataProcessingStatus::IN_DPL_WRAPPER, "dpl/in_handle_data" });
+      monitoring.send({ DataProcessingStatus::IN_FAIRMQ, "dpl/in_handle_data" });
       monitoring.flushBuffer(); });
   static const auto reftime = std::chrono::system_clock::now();
   if (mRate > 0.001) {
