@@ -158,6 +158,11 @@ void WorkflowHelpers::injectServiceDevices(WorkflowSpec& workflow)
 
   for (size_t wi = 0; wi < workflow.size(); ++wi) {
     auto& consumer = workflow[wi];
+    std::string prefix = "internal-dpl-";
+    if (consumer.inputs.empty() && consumer.name.compare(0, prefix.size(), prefix) != 0) {
+      consumer.inputs.push_back(InputSpec{ "timer", "DPL", "TIMER", 0, Lifetime::Timer });
+      consumer.options.push_back(ConfigParamSpec{ "period-timer", VariantType::Int, 0, { "timer period in us" } });
+    }
     for (size_t ii = 0; ii < consumer.inputs.size(); ++ii) {
       auto& input = consumer.inputs[ii];
       switch (input.lifetime) {
