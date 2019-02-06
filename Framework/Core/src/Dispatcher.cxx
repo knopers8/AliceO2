@@ -19,11 +19,16 @@
 #include "Framework/DataProcessingHeader.h"
 #include "Framework/DataSpecUtils.h"
 
+#include <Monitoring/Monitoring.h>
 #include <Configuration/ConfigurationInterface.h>
 #include <Configuration/ConfigurationFactory.h>
 #include <fairmq/FairMQDevice.h>
 #include <fairmq/FairMQLogger.h>
 
+#include <chrono>
+#include <Framework/ControlService.h>
+
+using namespace std::chrono;
 using namespace o2::configuration;
 
 namespace o2
@@ -53,6 +58,8 @@ void Dispatcher::init(InitContext& ctx)
 
 void Dispatcher::run(ProcessingContext& ctx)
 {
+//  auto start = steady_clock::now();
+
   for (const auto& input : ctx.inputs()) {
     if (input.header != nullptr && input.spec != nullptr) {
 
@@ -70,6 +77,21 @@ void Dispatcher::run(ProcessingContext& ctx)
       }
     }
   }
+
+//  auto stop = steady_clock::now();
+//  auto nsecPerCall = duration_cast<nanoseconds>(stop - start).count();
+//
+//  static int i = -1000;
+//  static decltype(nsecPerCall) avg = 0;
+//  if ( i > 0) {
+//    avg += nsecPerCall;
+//  }
+//  if ( ++i > 10000 - 1000) {
+//    LOG(INFO) << "DISPATCHERRUN AVG: " << avg / i;
+//    i = 0;
+//    avg = 0;
+//    ctx.services().get<ControlService>().readyToQuit(true);
+//  }
 }
 
 void Dispatcher::send(DataAllocator& dataAllocator, const DataRef& inputData, const Output& output) const
