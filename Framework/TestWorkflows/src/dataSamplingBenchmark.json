@@ -1,0 +1,25 @@
+{
+  "dataSamplingPolicies": [
+    {
+      "id": "benchmark",
+      "active": "true",
+      "machines": [],
+      "dataHeaders": [
+        {
+          "binding": "TST",
+          "dataOrigin": "TST",
+          "dataDescription": "RAWDATA"
+        }
+      ],
+      "subSpec": "-1",
+      "samplingConditions": [
+        {
+          "condition": "random",
+          "fraction": "1.0",
+          "seed": "22222"
+        }
+      ],
+      "blocking": "false"
+    }
+  ]
+}

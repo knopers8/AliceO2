@@ -19,11 +19,18 @@
 #include "Framework/DataProcessingHeader.h"
 #include "Framework/DataSpecUtils.h"
 #include "Framework/Logger.h"
+#include "Framework/CallbackService.h"
 
+#include <Monitoring/Monitoring.h>
 #include <Configuration/ConfigurationInterface.h>
 #include <Configuration/ConfigurationFactory.h>
 #include <fairmq/FairMQDevice.h>
 
+#include <chrono>
+#include <iomanip>
+#include <Framework/ControlService.h>
+
+using namespace std::chrono;
 using namespace o2::configuration;
 
 namespace o2
@@ -58,10 +65,28 @@ void Dispatcher::init(InitContext& ctx)
                 << policyConfig.second.get_optional<std::string>("id").value_or("") << "'";
     }
   }
+
+  ctx.services().get<framework::CallbackService>().set(framework::CallbackService::Id::Stop, [this]() {
+    std::ofstream file;
+    file.open("data-sampling-benchmark", std::fstream::out | std::fstream::app);
+    if (file) {
+      if (elapsed_time_ms < 1 || number_of_passed_messages <= 1) {
+        std::cerr << "elapsed_time_ms " << elapsed_time_ms << " or number_of_passed_messages " << number_of_passed_messages << " wrong" << std::endl;
+      } else {
+        LOG(INFO) << "elapsed_time_ms " << elapsed_time_ms << " or number_of_passed_messages " << number_of_passed_messages;
+        file << std::setw(20) << number_of_passed_messages * 1000 / elapsed_time_ms;
+      }
+    } else {
+      std::cerr << "could not open file for benchmark results" << std::endl;
+    }
+    file.close();
+  });
 }
 
 void Dispatcher::run(ProcessingContext& ctx)
 {
+  static auto start = steady_clock::now();
+
   for (const auto& input : ctx.inputs()) {
     if (input.header != nullptr && input.spec != nullptr) {
       const auto* inputHeader = header::get<header::DataHeader*>(input.header);
@@ -70,26 +95,37 @@ void Dispatcher::run(ProcessingContext& ctx)
       for (auto& policy : mPolicies) {
         // todo: consider getting the outputSpec in match to improve performance
         // todo: consider matching (and deciding) in completion policy to save some time
+        if (policy->match(inputMatcher)) {
+          
+          if(policy->decide(input)) {
 
-        if (policy->match(inputMatcher) && policy->decide(input)) {
+            // We copy every header which is not DataHeader or DataProcessingHeader,
+            // so that custom data-dependent headers are passed forward,
+            // and we add a DataSamplingHeader.
+            header::Stack headerStack{
+              std::move(extractAdditionalHeaders(input.header)),
+              std::move(prepareDataSamplingHeader(*policy.get(), ctx.services().get<const DeviceSpec>()))};
 
-          // We copy every header which is not DataHeader or DataProcessingHeader,
-          // so that custom data-dependent headers are passed forward,
-          // and we add a DataSamplingHeader.
-          header::Stack headerStack{
-            std::move(extractAdditionalHeaders(input.header)),
-            std::move(prepareDataSamplingHeader(*policy.get(), ctx.services().get<const DeviceSpec>()))};
-
-          if (!policy->getFairMQOutputChannel().empty()) {
-            sendFairMQ(ctx.services().get<RawDeviceService>().device(), input, policy->getFairMQOutputChannelName(), std::move(headerStack));
-          } else {
-            Output output = policy->prepareOutput(inputMatcher, input.spec->lifetime);
-            output.metaHeader = std::move(header::Stack{std::move(output.metaHeader), std::move(headerStack)});
-            send(ctx.outputs(), input, std::move(output));
+            if (!policy->getFairMQOutputChannel().empty()) {
+              sendFairMQ(ctx.services().get<RawDeviceService>().device(), input, policy->getFairMQOutputChannelName(), std::move(headerStack));
+            } else {
+              Output output = policy->prepareOutput(inputMatcher, input.spec->lifetime);
+              output.metaHeader = std::move(header::Stack{std::move(output.metaHeader), std::move(headerStack)});
+              send(ctx.outputs(), input, std::move(output));
+            }
           }
+          number_of_passed_messages++;
         }
       }
     }
+  }
+
+  auto now = steady_clock::now();
+  auto diff = duration_cast<milliseconds>(now - start).count();
+
+  if ( diff > 300*1000) {
+    elapsed_time_ms = diff;
+    ctx.services().get<ControlService>().readyToQuit(true);
   }
 }
 

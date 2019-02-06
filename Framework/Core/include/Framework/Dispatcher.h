@@ -60,6 +60,10 @@ class Dispatcher : public Task
   Outputs outputs;
   // policies should be shared between all pipeline threads
   std::vector<std::shared_ptr<DataSamplingPolicy>> mPolicies;
+
+  // benchmark stuff
+  long number_of_passed_messages = 0;
+  long elapsed_time_ms = -1;
 };
 
 } // namespace framework
