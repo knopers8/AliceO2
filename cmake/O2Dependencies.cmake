@@ -345,6 +345,10 @@ o2_define_bucket(
     AliceO2::Common
     CURL::libcurl
     rapidjson_bucket
+    MathCore
+    Gui
+    Graf
+    Gpad
 
     SYSTEMINCLUDE_DIRECTORIES
     ${CMAKE_SOURCE_DIR}/Utilities/PCG/include
