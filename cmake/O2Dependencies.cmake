@@ -349,6 +349,7 @@ o2_define_bucket(
     Gui
     Graf
     Gpad
+    FFTW
 
     SYSTEMINCLUDE_DIRECTORIES
     ${CMAKE_SOURCE_DIR}/Utilities/PCG/include
