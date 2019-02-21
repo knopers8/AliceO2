@@ -389,13 +389,13 @@ double testRunsChiSquare(std::string prngName, std::vector<uint64_t> seeds, doub
       }
     }
 
-    TCanvas* c1 = new TCanvas("c1", "c1", 1800 / 2, 1000 / 2);
+//    TCanvas* c1 = new TCanvas("c1", "c1", 1800 / 2, 1000 / 2);
     //    runsHisto.Scale(1);
-    runsHisto.Draw("same");
-    ideal.Draw("same");
-    c1->Update();
-    c1->Print("runs.png");
-    delete c1;
+//    runsHisto.Draw("same");
+//    ideal.Draw("same");
+//    c1->Update();
+//    c1->Print("runs.png");
+//    delete c1;
 
     double chiSquare = runsHisto.Chisquare(&ideal);
     pValues.push_back(TMath::Prob(chiSquare, buckets - 1));
@@ -471,24 +471,22 @@ double testMatricesRanks(std::string prngName, std::vector<uint64_t> seeds, doub
   // todo ideal histogram
   auto product = [](int j0, int jn, double t) {
     double prod = 1;
-    for (int j = j0; j < jn; j++) {
+    for (int j = j0; j <= jn; j++) {
       prod *= 1 - 1 / pow(t, j);
     }
     return prod;
   };
 
-  auto ideal = [&product, dimM, t=1/(1-fraction)](double *k, double *p) {
-    return dimM - product(*k + 1, 10000, t) / product(1, *k, t) * std::pow(t, (*k)*(*k));
+  auto ideal = [N, &product, dimM, t=1/(1-fraction)](double *x, double *p) {
+    double k = dimM - std::floor(*x);
+    return N * product(k + 1, 10000, t) / product(1, k, t) * std::pow(1 / t, k*k);
   };
-//  auto ideal = [&product, dimM, t=1/(1-fraction)](double *k, double *p) {
-//    return *k**k;
-//  };
 
-  TF1 idealf("idealf", ideal, 5, dimM, 1);
+  TF1 idealf("idealf", ideal, 1, dimM, 1);
 
   for (const auto seed : seeds) {
 
-    TH1I ranksHisto("ranks histo", "ranks histo", dimM, 1, dimM);
+    TH1I ranksHisto("ranks histo", "ranks histo", dimM, 0, dimM);
 
     std::unique_ptr<PRNG> prng = createPRNG(prngName, seed, fraction);
 
@@ -503,13 +501,13 @@ double testMatricesRanks(std::string prngName, std::vector<uint64_t> seeds, doub
       ranksHisto.Fill(rank);
     }
 
-    TCanvas* c1 = new TCanvas("c1", "c1", 1800 / 2, 1000 / 2);
-    //    runsHisto.Scale(1);
-    idealf.Draw();
+//    TCanvas* c1 = new TCanvas("c1", "c1", 1800 / 2, 1000 / 2);
+////    ranksHisto.Scale(1.0 / ranksHisto.Integral());
+//    idealf.Draw();
 //    ranksHisto.Draw("same");
 //    c1->Update();
-    c1->Print("ranks.png");
-    delete c1;
+//    c1->Print("ranks.png");
+//    delete c1;
 
     // todo compare histogram with the ideal
     double chiSquare = 0;
@@ -590,7 +588,7 @@ double testRunsAutoCorrelation(std::string prngName, std::vector<uint64_t> seeds
 }
 
 std::vector<double> fractions = { 0.1, 0.05, 0.01, 0.001, 0.0001 };
-//std::vector<double> fractions = { 0.5 };
+//std::vector<double> fractions = { 0.1 };
 std::vector<uint64_t> seeds = {
   552289370, 808574509, 214589538, 295179512, 863436240,
   19985442, 402171838, 848812329, 341858571, 191085231,
@@ -674,10 +672,10 @@ int main(int argc, char* argv[])
     for (const auto fraction : fractions) {
       std::cout << "> Testing for fraction " << fraction << std::endl;
 
-            chiSquareTest.push_back(testSimpleChiSquare(prng, seeds, fraction, testSize));
-            runsChiSquareTest.push_back(testRunsChiSquare(prng, seeds, fraction, testSize ));
-//      std::cout << testMatricesRanks(prng, seeds, fraction, 1000, 32) << std::endl;
-      runsFFTTest.push_back(testRunsAutoCorrelation(prng, seeds, fraction, 1024*1024));
+      chiSquareTest.push_back(testSimpleChiSquare(prng, seeds, fraction, testSize));
+      runsChiSquareTest.push_back(testRunsChiSquare(prng, seeds, fraction, testSize));
+//      std::cout << testMatricesRanks(prng, seeds, fraction, 1000, 128) << std::endl;
+      runsFFTTest.push_back(testRunsAutoCorrelation(prng, seeds, fraction, testSize * fraction));
     }
 
     std::cout << "============================= TEST RESULTS =============================" << std::endl;
@@ -685,20 +683,20 @@ int main(int argc, char* argv[])
     std::cout << "Speed: " << nsecPerCall << " ns/loop" << std::endl;
     std::cout << "Tested fracions | ";
     for (auto fr : fractions)
-      std::cout << std::setw(10) << fr << ", ";
+      std::cout << std::setw(10) << fr << " ";
     std::cout << std::endl;
     std::cout << "------------------------------------------------------------------------" << std::endl;
     std::cout << "Chi square      | ";
     for (auto chi : chiSquareTest)
-      std::cout << std::setw(10) << chi << ", ";
-    std::cout << std::endl;
-    std::cout << "Runs Histo RMS  | ";
-    for (auto chi : runsChiSquareTest)
-      std::cout << std::setw(10) << chi << ", ";
+      std::cout << std::setw(10) << chi << " ";
     std::cout << std::endl;
     std::cout << "Runs Histo Chi2 | ";
+    for (auto chi : runsChiSquareTest)
+      std::cout << std::setw(10) << chi << " ";
+    std::cout << std::endl;
+    std::cout << "Runs FFT stddev | ";
     for (auto std : runsFFTTest)
-      std::cout << std::setw(10) << std << ", ";
+      std::cout << std::setw(10) << std << " ";
     std::cout << std::endl;
   }
 
