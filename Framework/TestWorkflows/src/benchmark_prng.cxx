@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <iomanip>
 #include <chrono>
+#include <fstream>
 
 #include <boost/program_options.hpp>
 #include <TF1.h>
@@ -662,7 +663,7 @@ int main(int argc, char* argv[])
     //    auto prng = createPRNG(prng);
     size_t testSize = vm["test-size"].as<size_t>();
 
-    size_t nsecPerCall = testSpeed(prng, testSize);
+//    size_t nsecPerCall = testSpeed(prng, testSize);
 
     std::vector<double> chiSquareTest;
     std::vector<double> runsChiSquareTest;
@@ -678,26 +679,39 @@ int main(int argc, char* argv[])
       runsFFTTest.push_back(testRunsAutoCorrelation(prng, seeds, fraction, testSize * fraction));
     }
 
+
+
+    auto publishResults = [&](auto& stream) {
+
+      stream << "PRNG            , " << std::setw(15) << prng << std::endl;
+      stream << "Test size       , " << std::setw(15) << testSize << std::endl;
+  //    stream << "Speed: " << nsecPerCall << " ns/loop" << std::endl;
+      stream << "Tested fracions , ";
+      for (auto fr : fractions)
+        stream << std::setw(15) << fr << ", ";
+      stream << std::endl;
+  //    stream << "------------------------------------------------------------------------" << std::endl;
+      stream << "Chi square      , ";
+      for (auto chi : chiSquareTest)
+        stream << std::setw(15) << chi << ", ";
+      stream << std::endl;
+      stream << "Runs Histo Chi2 , ";
+      for (auto chi : runsChiSquareTest)
+        stream << std::setw(15) << chi << ", ";
+      stream << std::endl;
+      stream << "Runs FFT stddev , ";
+      for (auto std : runsFFTTest)
+        stream << std::setw(15) << std << ", ";
+      stream << std::endl;
+    };
+
     std::cout << "============================= TEST RESULTS =============================" << std::endl;
-    std::cout << "Method: " << prng << std::endl;
-    std::cout << "Speed: " << nsecPerCall << " ns/loop" << std::endl;
-    std::cout << "Tested fracions | ";
-    for (auto fr : fractions)
-      std::cout << std::setw(10) << fr << " ";
-    std::cout << std::endl;
-    std::cout << "------------------------------------------------------------------------" << std::endl;
-    std::cout << "Chi square      | ";
-    for (auto chi : chiSquareTest)
-      std::cout << std::setw(10) << chi << " ";
-    std::cout << std::endl;
-    std::cout << "Runs Histo Chi2 | ";
-    for (auto chi : runsChiSquareTest)
-      std::cout << std::setw(10) << chi << " ";
-    std::cout << std::endl;
-    std::cout << "Runs FFT stddev | ";
-    for (auto std : runsFFTTest)
-      std::cout << std::setw(10) << std << " ";
-    std::cout << std::endl;
+    publishResults(std::cout);
+
+    std::ofstream file;
+    file.open(prng);
+    publishResults(file);
+    file.close();
   }
 
   return 0;
