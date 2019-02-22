@@ -20,6 +20,7 @@
 #include "Framework/DataSpecUtils.h"
 #include "Framework/CallbackService.h"
 #include "Framework/Logger.h"
+#include "Framework/CallbackService.h"
 
 #include <Monitoring/Monitoring.h>
 #include <Configuration/ConfigurationInterface.h>
@@ -109,6 +110,7 @@ void Dispatcher::run(ProcessingContext& ctx)
             }
             number_of_passed_messages++;
           }
+          number_of_passed_messages++;
         }
       }
     }
