@@ -99,7 +99,7 @@ void Dispatcher::run(ProcessingContext& ctx)
   auto now = steady_clock::now();
   auto diff = duration_cast<milliseconds>(now - start).count();
 
-  if ( diff > 10*1000) {
+  if ( diff > 300*1000) {
     elapsed_time_ms = diff;
     ctx.services().get<ControlService>().readyToQuit(true);
   }
