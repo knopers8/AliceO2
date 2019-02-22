@@ -18,6 +18,7 @@
 #include "Framework/DataSamplingPolicy.h"
 #include "Framework/DataProcessingHeader.h"
 #include "Framework/DataSpecUtils.h"
+#include "Framework/CallbackService.h"
 
 #include <Monitoring/Monitoring.h>
 #include <Configuration/ConfigurationInterface.h>
@@ -54,11 +55,27 @@ void Dispatcher::init(InitContext& ctx)
   for (auto&& policyConfig : policiesTree) {
     mPolicies.emplace_back(std::make_shared<DataSamplingPolicy>(policyConfig.second));
   }
+
+  ctx.services().get<framework::CallbackService>().set(framework::CallbackService::Id::Stop, [this]() {
+    std::ofstream file;
+    file.open("data-sampling-benchmark", std::fstream::out | std::fstream::app);
+    if (file) {
+      if (elapsed_time_ms < 1 || number_of_passed_messages <= 1) {
+        std::cerr << "elapsed_time_ms " << elapsed_time_ms << " or number_of_passed_messages " << number_of_passed_messages << " wrong" << std::endl;
+      } else {
+        LOG(INFO) << "elapsed_time_ms " << elapsed_time_ms << " or number_of_passed_messages " << number_of_passed_messages;
+        file << std::setw(20) << number_of_passed_messages * 1000 / elapsed_time_ms;
+      }
+    } else {
+      std::cerr << "could not open file for benchmark results" << std::endl;
+    }
+    file.close();
+  });
 }
 
 void Dispatcher::run(ProcessingContext& ctx)
 {
-//  auto start = steady_clock::now();
+  static auto start = steady_clock::now();
 
   for (const auto& input : ctx.inputs()) {
     if (input.header != nullptr && input.spec != nullptr) {
@@ -73,25 +90,19 @@ void Dispatcher::run(ProcessingContext& ctx)
           } else {
             send(ctx.outputs(), input, policy->prepareOutput(*input.spec));
           }
+          number_of_passed_messages++;
         }
       }
     }
   }
 
-//  auto stop = steady_clock::now();
-//  auto nsecPerCall = duration_cast<nanoseconds>(stop - start).count();
-//
-//  static int i = -1000;
-//  static decltype(nsecPerCall) avg = 0;
-//  if ( i > 0) {
-//    avg += nsecPerCall;
-//  }
-//  if ( ++i > 10000 - 1000) {
-//    LOG(INFO) << "DISPATCHERRUN AVG: " << avg / i;
-//    i = 0;
-//    avg = 0;
-//    ctx.services().get<ControlService>().readyToQuit(true);
-//  }
+  auto now = steady_clock::now();
+  auto diff = duration_cast<milliseconds>(now - start).count();
+
+  if ( diff > 10*1000) {
+    elapsed_time_ms = diff;
+    ctx.services().get<ControlService>().readyToQuit(true);
+  }
 }
 
 void Dispatcher::send(DataAllocator& dataAllocator, const DataRef& inputData, const Output& output) const

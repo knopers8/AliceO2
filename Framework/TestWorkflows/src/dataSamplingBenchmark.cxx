@@ -26,8 +26,9 @@ void customize(std::vector<ChannelConfigurationPolicy>& policies)
 void customize(std::vector<ConfigParamSpec>& workflowOptions)
 {
   workflowOptions.push_back( ConfigParamSpec{ "payload-size", VariantType::Int, 10000, { "payload size" } });
-
   workflowOptions.push_back( ConfigParamSpec{ "producers", VariantType::Int, 1, { "number of producers"} });
+  workflowOptions.push_back( ConfigParamSpec{ "dispatchers", VariantType::Int, 1, { "number of dispatchers"} });
+  workflowOptions.push_back( ConfigParamSpec{ "usleep", VariantType::Int, 1, { "usleep time of producers"} });
 }
 
 #include <boost/algorithm/string.hpp>
@@ -48,6 +49,8 @@ WorkflowSpec defineDataProcessing(ConfigContext const& config)
 
   size_t playloadSize = config.options().get<int>("payload-size");
   size_t producers = config.options().get<int>("producers");
+  size_t dispatchers = config.options().get<int>("dispatchers");
+  size_t usleeptime = config.options().get<int>("usleep");
 
   for (size_t i = 0; i < producers; i++) {
     specs.push_back(DataProcessorSpec {
@@ -57,8 +60,8 @@ WorkflowSpec defineDataProcessing(ConfigContext const& config)
         OutputSpec{ "TST", "RAWDATA", i, Lifetime::Timeframe }
       },
       AlgorithmSpec{
-        (AlgorithmSpec::ProcessCallback) [playloadSize, i](ProcessingContext& processingContext) {
-//          sleep(1);
+        (AlgorithmSpec::ProcessCallback) [usleeptime, playloadSize, i](ProcessingContext& processingContext) {
+          usleep(usleeptime);
           auto data = processingContext.outputs().make<char>(Output{ "TST", "RAWDATA", i, Lifetime::Timeframe }, playloadSize);
         }
       }
@@ -67,7 +70,7 @@ WorkflowSpec defineDataProcessing(ConfigContext const& config)
   }
 
   std::string configurationSource = std::string("json://") + getenv("BASEDIR") + "/../../O2/Framework/TestWorkflows/src/dataSamplingBenchmark.json";
-  DataSampling::GenerateInfrastructure(specs, configurationSource, 1);
+  DataSampling::GenerateInfrastructure(specs, configurationSource, dispatchers);
 
   std::vector<InputSpec> sinkInputs;
   for (size_t i = 0; i < producers; i++) {
@@ -83,9 +86,7 @@ WorkflowSpec defineDataProcessing(ConfigContext const& config)
     Outputs{},
     AlgorithmSpec{
       (AlgorithmSpec::ProcessCallback) [](ProcessingContext& processingContext){
-//        LOG(INFO) << "dindu nuffin";
-//        sleep(4);
-//        processingContext.services().get<ControlService>().readyToQuit(true);
+
       }
     }
   };
