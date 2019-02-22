@@ -274,6 +274,19 @@ class PRNG_TRandomRanlux48 : public PRNG
   TRandomRanlux48 mGenerator;
 };
 
+class PRNG_Dummy : public PRNG
+{
+  public:
+  PRNG_Dummy(uint64_t seed, double fraction)
+    : PRNG::PRNG(seed, fraction){};
+  ~PRNG_Dummy() override = default;
+
+  bool rand(uint64_t in)
+  {
+    return true;
+  }
+};
+
 std::unique_ptr<PRNG> createPRNG(std::string classname, uint64_t seed, double fraction)
 {
   if (classname == "PRNG_PCG") {
@@ -298,6 +311,8 @@ std::unique_ptr<PRNG> createPRNG(std::string classname, uint64_t seed, double fr
     return std::make_unique<PRNG_TRandomMT64>(seed, fraction);
   } else if (classname == "PRNG_TRandomRanlux48") {
     return std::make_unique<PRNG_TRandomRanlux48>(seed, fraction);
+  } else if (classname == "PRNG_Dummy") {
+    return std::make_unique<PRNG_Dummy>(seed, fraction);
   } else {
     throw std::runtime_error("Unknown PRNG: " + classname);
   }
@@ -306,24 +321,21 @@ std::unique_ptr<PRNG> createPRNG(std::string classname, uint64_t seed, double fr
 double testSpeed(std::string prngName, uint64_t N)
 {
   // speed test
-  //    std::cout << "> Speed test starting" << std::endl;
+  std::cout << "> Speed test starting for " << prngName << std::endl;
+  std::unique_ptr<PRNG> prng = createPRNG(prngName, 397583947, 0.01);
+  size_t antiOptimizationDummy = 0;
+  steady_clock::time_point timeStart = steady_clock::now();
 
-  //    size_t antiOptimizationDummy = 0;
-  //    steady_clock::time_point timeStart = steady_clock::now();
-  //
-  //    for (size_t i = 0; i < testSize * 10; i++) {
-  //      DataProcessingHeader dph{ i, 0 };
-  //      o2::header::Stack headerStack{ dph };
-  //      DataRef dr{ nullptr, reinterpret_cast<const char*>(headerStack.data()), nullptr };
-  //      antiOptimizationDummy += cond->decide(dr);
-  //    }
-  //
-  //    size_t nsecPerCall = duration_cast<nanoseconds>(steady_clock::now() - timeStart).count() / (testSize * 10);
+  for (size_t i = 0; i < N; i++) {
+    antiOptimizationDummy += prng->rand(i);
+  }
 
-  //    std::cout << "Speed test: " << nsecPerCall << " ns/loop" << std::endl;
-  //    std::cout << "Ignore me " << antiOptimizationDummy << std::endl;
+  double nsPerCall = duration_cast<nanoseconds>(steady_clock::now() - timeStart).count() / double(N);
 
-  return 0; //todo
+  std::cout << "Speed test: " << nsPerCall << " ns/loop" << std::endl;
+  std::cout << "Ignore me " << antiOptimizationDummy << std::endl;
+
+  return nsPerCall;
 }
 
 double testSimpleChiSquare(std::string prngName, std::vector<uint64_t> seeds, double fraction, uint64_t N)
@@ -623,7 +635,7 @@ int main(int argc, char* argv[])
   bpo::store(parse_command_line(argc, argv, desc), vm);
   bpo::notify(vm);
 
-  std::string prng = vm["prng"].as<std::string>();
+
 
   if (vm["mode"].as<std::string>() == "produce") {
     /*
@@ -654,22 +666,19 @@ int main(int argc, char* argv[])
     */
   } else if (vm["mode"].as<std::string>() == "test") {
 
+    std::string prng = vm["prng"].as<std::string>();
+
     std::cout << "================================================\n";
     std::cout << "Starting non-uniform random bit generation tests\n";
     std::cout << "================================================\n";
     std::cout << "Chosen PRNG: " << prng << "\n";
 
-    //    auto cond = DataSamplingConditionFactory::create(prng);
-    //    auto prng = createPRNG(prng);
     size_t testSize = vm["test-size"].as<size_t>();
-
-//    size_t nsecPerCall = testSpeed(prng, testSize);
 
     std::vector<double> chiSquareTest;
     std::vector<double> runsChiSquareTest;
     std::vector<double> runsFFTTest;
 
-    // -- do it for different percentages --
     for (const auto fraction : fractions) {
       std::cout << "> Testing for fraction " << fraction << std::endl;
 
@@ -679,18 +688,14 @@ int main(int argc, char* argv[])
       runsFFTTest.push_back(testRunsAutoCorrelation(prng, seeds, fraction, testSize * fraction));
     }
 
-
-
     auto publishResults = [&](auto& stream) {
 
       stream << "PRNG            , " << std::setw(15) << prng << std::endl;
       stream << "Test size       , " << std::setw(15) << testSize << std::endl;
-  //    stream << "Speed: " << nsecPerCall << " ns/loop" << std::endl;
       stream << "Tested fracions , ";
       for (auto fr : fractions)
         stream << std::setw(15) << fr << ", ";
       stream << std::endl;
-  //    stream << "------------------------------------------------------------------------" << std::endl;
       stream << "Chi square      , ";
       for (auto chi : chiSquareTest)
         stream << std::setw(15) << chi << ", ";
@@ -712,7 +717,34 @@ int main(int argc, char* argv[])
     file.open(prng);
     publishResults(file);
     file.close();
-  }
+  } else if (vm["mode"].as<std::string>() == "speedtest") {
+
+    const std::vector<std::string> prngs = {
+      "PRNG_PCG", "PRNG_Hash1", "PRNG_Hash2", "PRNG_TRandom", "PRNG_TRandom1", "PRNG_TRandom2", "PRNG_TRandom3",
+      "PRNG_TRandomMixMax", "PRNG_TRandomMixMax17", "PRNG_TRandomMT64", "PRNG_TRandomRanlux48", "PRNG_Dummy"
+    };
+
+    std::vector<double> results;
+    for( const auto& prng : prngs) {
+      size_t testSize = vm["test-size"].as<size_t>();
+      double nsPerCall = testSpeed(prng, testSize);
+      results.push_back(nsPerCall);
+    }
+
+    auto publishResults = [&](auto& stream) {
+      for (size_t i = 0; i < prngs.size(); i++) {
+        stream << std::setw(30) << prngs[i] << ", " << std::setw(15) << results[i] << std::endl;
+      }
+    };
+
+    std::cout << "============================= TEST RESULTS =============================" << std::endl;
+    publishResults(std::cout);
+
+    std::ofstream file;
+    file.open("speedtest");
+    publishResults(file);
+    file.close();
+  };
 
   return 0;
 }
