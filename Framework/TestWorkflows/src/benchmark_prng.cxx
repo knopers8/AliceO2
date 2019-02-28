@@ -35,6 +35,7 @@ class PRNG
   virtual ~PRNG() = default;
 
   virtual bool rand(uint64_t in) = 0;
+  virtual uint32_t fullRand(uint64_t in) { return 0; };
 
  protected:
   uint64_t mSeed = 0;
@@ -151,6 +152,11 @@ class PRNG_TRandom : public PRNG
     return static_cast<bool>(mGenerator.Binomial(1, mFraction));
   }
 
+  uint32_t fullRand(uint64_t in) {
+    mGenerator.SetSeed(in * mSeed);
+    return static_cast<uint32_t>(mGenerator.Rndm() * std::numeric_limits<uint32_t>::max());
+  };
+
  private:
   TRandom mGenerator;
 };
@@ -168,7 +174,12 @@ class PRNG_TRandom1 : public PRNG
     return static_cast<bool>(mGenerator.Binomial(1, mFraction));
   }
 
- private:
+  uint32_t fullRand(uint64_t in) {
+    mGenerator.SetSeed(in * mSeed);
+    return static_cast<uint32_t>(mGenerator.Rndm() * std::numeric_limits<uint32_t>::max());
+  };
+
+  private:
   TRandom1 mGenerator;
 };
 
@@ -184,6 +195,11 @@ class PRNG_TRandom2 : public PRNG
     mGenerator.SetSeed(in * mSeed);
     return static_cast<bool>(mGenerator.Binomial(1, mFraction));
   }
+
+  uint32_t fullRand(uint64_t in) {
+    mGenerator.SetSeed(in * mSeed);
+    return static_cast<uint32_t>(mGenerator.Rndm() * std::numeric_limits<uint32_t>::max());
+  };
 
  private:
   TRandom2 mGenerator;
@@ -202,6 +218,11 @@ class PRNG_TRandom3 : public PRNG
     return static_cast<bool>(mGenerator.Binomial(1, mFraction));
   }
 
+  uint32_t fullRand(uint64_t in) {
+    mGenerator.SetSeed(in * mSeed);
+    return static_cast<uint32_t>(mGenerator.Rndm() * std::numeric_limits<uint32_t>::max());
+  };
+
  private:
   TRandom3 mGenerator;
 };
@@ -218,6 +239,11 @@ class PRNG_TRandomMixMax : public PRNG
     mGenerator.SetSeed(in * mSeed);
     return static_cast<bool>(mGenerator.Binomial(1, mFraction));
   }
+
+  uint32_t fullRand(uint64_t in) {
+    mGenerator.SetSeed(in * mSeed);
+    return static_cast<uint32_t>(mGenerator.Rndm() * std::numeric_limits<uint32_t>::max());
+  };
 
  private:
   TRandomMixMax mGenerator;
@@ -236,6 +262,11 @@ class PRNG_TRandomMixMax17 : public PRNG
     return static_cast<bool>(mGenerator.Binomial(1, mFraction));
   }
 
+  uint32_t fullRand(uint64_t in) {
+    mGenerator.SetSeed(in * mSeed);
+    return static_cast<uint32_t>(mGenerator.Rndm() * std::numeric_limits<uint32_t>::max());
+  };
+
  private:
   TRandomMixMax17 mGenerator;
 };
@@ -253,6 +284,11 @@ class PRNG_TRandomMT64 : public PRNG
     return static_cast<bool>(mGenerator.Binomial(1, mFraction));
   }
 
+  uint32_t fullRand(uint64_t in) {
+    mGenerator.SetSeed(in * mSeed);
+    return static_cast<uint32_t>(mGenerator.Rndm() * std::numeric_limits<uint32_t>::max());
+  };
+
  private:
   TRandomMT64 mGenerator;
 };
@@ -269,6 +305,11 @@ class PRNG_TRandomRanlux48 : public PRNG
     mGenerator.SetSeed(in * mSeed);
     return static_cast<bool>(mGenerator.Binomial(1, mFraction));
   }
+
+  uint32_t fullRand(uint64_t in) {
+    mGenerator.SetSeed(in * mSeed);
+    return static_cast<uint32_t>(mGenerator.Rndm() * std::numeric_limits<uint32_t>::max());
+  };
 
  private:
   TRandomRanlux48 mGenerator;
@@ -638,32 +679,17 @@ int main(int argc, char* argv[])
 
 
   if (vm["mode"].as<std::string>() == "produce") {
-    /*
-    auto cond = DataSamplingConditionFactory::create(prng);
+
+    std::unique_ptr<PRNG> prng = createPRNG(vm["prng"].as<std::string>(), 1928472385, 0.5);
+
     uint64_t i = 0;
     size_t bit = 0;
     unsigned char byte = 0;
-    while (cond) {
-      if (prng == "pcg" || prng.substr(0, 7) == "TRandom") {
-        uint32_t rnd = cond->rnd(i);
-        //      std::cout << rnd << std::endl;
-        write(1, &rnd, sizeof(uint32_t));
-      } else if (prng == "hash") {
-        bool rnd = static_cast<bool>(cond->rnd(i));
-        byte |= (static_cast<unsigned char>(rnd) & 0x01) << bit++;
-        if (bit >= 8) {
-          write(1, &byte, sizeof(unsigned char));
-          //        std::cout << uint16_t(byte) << std::endl;
-          bit = 0;
-          byte = 0;
-        }
-      } else if (prng == "hashCombine") {
-        uint64_t rnd = cond->rnd(i);
-        write(1, &rnd, sizeof(uint64_t));
-      }
-      i++;
+    while (prng) {
+      uint32_t rnd = prng->fullRand(i++);
+      write(1, &rnd, sizeof(uint32_t));
     }
-    */
+
   } else if (vm["mode"].as<std::string>() == "test") {
 
     std::string prng = vm["prng"].as<std::string>();
