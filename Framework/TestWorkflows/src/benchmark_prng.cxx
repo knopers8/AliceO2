@@ -727,6 +727,13 @@ int main(int argc, char* argv[])
     std::vector<double> results;
     for( const auto& prng : prngs) {
       size_t testSize = vm["test-size"].as<size_t>();
+      if (prng == "PRNG_TRandomMixMax") {
+        testSize /= 5000;
+      } else if (prng == "PRNG_TRandomMixMax17") {
+        testSize /= 100;
+      } else if (prng == "PRNG_TRandom3" || prng == "PRNG_TRandomMT64") {
+        testSize /= 10;
+      } 
       double nsPerCall = testSpeed(prng, testSize);
       results.push_back(nsPerCall);
     }
