@@ -25,7 +25,7 @@ for payload_size in ${PAYLOAD_SIZE[@]}; do
         printf "%21s," "$usleep_time" >> data-sampling-benchmark
         printf "%21s," "$nb_dispatchers" >> data-sampling-benchmark
 
-        timeout -k 30s 6m dataSamplingBenchmark -q -b --payload-size $payload_size --producers $nb_producers --dispatchers $nb_dispatchers --usleep $usleep_time
+        timeout -k 60s 8m dataSamplingBenchmark -q -b --monitoring-backend no-op:// --infologger-severity info --payload-size $payload_size --producers $nb_producers --dispatchers $nb_dispatchers --usleep $usleep_time
         pkill -9 -f dataSamplingBenchmark
         printf "\n" >> data-sampling-benchmark
       done
