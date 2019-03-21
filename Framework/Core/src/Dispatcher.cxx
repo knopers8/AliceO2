@@ -83,12 +83,15 @@ void Dispatcher::run(ProcessingContext& ctx)
       for (auto& policy : mPolicies) {
         // todo: consider getting the outputSpec in match to improve performance
         // todo: consider matching (and deciding) in completion policy to save some time
-        if (policy->match(*input.spec) && policy->decide(input)) {
+        if (policy->match(*input.spec)) {
+          
+          if(policy->decide(input)) {
 
-          if (!policy->getFairMQOutputChannel().empty()) {
-            sendFairMQ(ctx.services().get<RawDeviceService>().device(), input, policy->getFairMQOutputChannelName());
-          } else {
-            send(ctx.outputs(), input, policy->prepareOutput(*input.spec));
+            if (!policy->getFairMQOutputChannel().empty()) {
+              sendFairMQ(ctx.services().get<RawDeviceService>().device(), input, policy->getFairMQOutputChannelName());
+            } else {
+              send(ctx.outputs(), input, policy->prepareOutput(*input.spec));
+            }
           }
           number_of_passed_messages++;
         }
