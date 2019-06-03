@@ -460,7 +460,7 @@ WorkflowHelpers::constructGraph(const WorkflowSpec &workflow,
     for (auto& output : constOutputs) {
       str << " - " << output.origin.str << "/"
           << output.description.str << "/"
-          << output.subSpec
+          << (output.subSpec ? std::to_string(output.subSpec.value()) : "*")
           << "\n";
     }
 
@@ -695,7 +695,7 @@ std::vector<InputSpec> WorkflowHelpers::computeDanglingOutputs(WorkflowSpec cons
       auto& outputSpec = workflow[output.workflowId].outputs[output.id];
       char buf[64];
       results.emplace_back(InputSpec{ (snprintf(buf, 64, "dangling_%zu_%zu", output.workflowId, output.id), buf), outputSpec.origin,
-                                      outputSpec.description, outputSpec.subSpec });
+                                      outputSpec.description, outputSpec.subSpec.value() }); //fixme: what to do when subspec has no value
     }
   }
 

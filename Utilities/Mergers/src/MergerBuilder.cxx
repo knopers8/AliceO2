@@ -79,7 +79,7 @@ framework::DataProcessorSpec MergerBuilder::buildSpec()
     merger.outputs[0].binding = { mergerOutputBinding() };
   }
 
-  merger.algorithm = framework::adaptFromTask<Merger>(mConfig, merger.outputs[0].subSpec);
+  merger.algorithm = framework::adaptFromTask<Merger>(mConfig, merger.outputs[0].subSpec.value());
 
   if (mConfig.publicationDecision.value == PublicationDecision::EachNSeconds) {
     merger.inputs.push_back({ "timer-publish", "MRGR", mergerDataDescription("timer-" + mName), mergerSubSpec(mLayer, mId), framework::Lifetime::Timer });

@@ -62,7 +62,7 @@ void DataSampling::GenerateInfrastructure(WorkflowSpec& workflow, const std::str
           "doesnt-matter", //externalOutput.binding.value,
           externalOutput.origin,
           externalOutput.description,
-          externalOutput.subSpec,
+          externalOutput.subSpec.value_or(-1),
           externalOutput.lifetime
         };
 
@@ -139,7 +139,7 @@ std::vector<InputSpec> DataSampling::InputSpecsForPolicy(ConfigurationInterface*
             path.second.binding.value,
             path.second.origin,
             path.second.description,
-            path.second.subSpec,
+            path.second.subSpec.value_or(-1),
             path.second.lifetime });
       }
       break;

@@ -29,7 +29,7 @@ struct LogicalChannelRange {
     name = std::string("out_") +
            spec.origin.as<std::string>() + "_" +
            spec.description.as<std::string>() + "_" +
-           std::to_string(spec.subSpec);
+           (spec.subSpec ? std::to_string(spec.subSpec.value()) : "*");
   }
 
   std::string name;

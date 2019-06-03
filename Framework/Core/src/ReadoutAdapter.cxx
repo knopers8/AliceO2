@@ -30,7 +30,7 @@ InjectorFunction readoutAdapter(OutputSpec const& spec)
       DataHeader dh;
       dh.dataOrigin = spec.origin;
       dh.dataDescription = spec.description;
-      dh.subSpecification = spec.subSpec;
+      dh.subSpecification = spec.subSpec.value(); // fixme: we should enforce user to put a value here
       dh.payloadSize = parts.At(i)->GetSize();
       dh.payloadSerializationMethod = o2::header::gSerializationMethodNone;
 

@@ -139,7 +139,10 @@ ConcreteDataMatcher DataSpecUtils::asConcreteDataMatcher(InputSpec const& spec)
 
 ConcreteDataMatcher DataSpecUtils::asConcreteDataMatcher(OutputSpec const& spec)
 {
-  return ConcreteDataMatcher{spec.origin, spec.description, spec.subSpec};
+  if (spec.subSpec) {
+    return ConcreteDataMatcher{spec.origin, spec.description, spec.subSpec.value()};
+  }
+  throw std::runtime_error("Unsupported matching pattern");
 }
 
 } // namespace framework

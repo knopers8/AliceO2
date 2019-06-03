@@ -80,7 +80,7 @@ BOOST_AUTO_TEST_CASE(InfrastructureBuilderLayers)
 
     BOOST_CHECK_EQUAL(mergersTopology[0].outputs[0].origin.str, "TST");
     BOOST_CHECK_EQUAL(mergersTopology[0].outputs[0].description.str, "test");
-    BOOST_CHECK_EQUAL(mergersTopology[0].outputs[0].subSpec, 0);
+    BOOST_CHECK_EQUAL(mergersTopology[0].outputs[0].subSpec.value_or(-1), 0);
   }
 
   {
@@ -103,7 +103,7 @@ BOOST_AUTO_TEST_CASE(InfrastructureBuilderLayers)
     BOOST_CHECK_EQUAL(mergersTopology[3].outputs.size(), 1);
     BOOST_REQUIRE_EQUAL(mergersTopology[3].outputs[0].origin.str, "TST");
     BOOST_CHECK_EQUAL(mergersTopology[3].outputs[0].description.str, "test");
-    BOOST_CHECK_EQUAL(mergersTopology[3].outputs[0].subSpec, 0);
+    BOOST_CHECK_EQUAL(mergersTopology[3].outputs[0].subSpec.value_or(-1), 0);
   }
 }
 
@@ -138,7 +138,7 @@ BOOST_AUTO_TEST_CASE(InfrastructureBuilderReductionFactor)
 
     BOOST_CHECK_EQUAL(mergersTopology[0].outputs[0].origin.str, "TST");
     BOOST_CHECK_EQUAL(mergersTopology[0].outputs[0].description.str, "test");
-    BOOST_CHECK_EQUAL(mergersTopology[0].outputs[0].subSpec, 0);
+    BOOST_CHECK_EQUAL(mergersTopology[0].outputs[0].subSpec.value_or(-1), o2::header::DataHeader::SubSpecificationType(0));
   }
 
   {
@@ -161,6 +161,6 @@ BOOST_AUTO_TEST_CASE(InfrastructureBuilderReductionFactor)
     BOOST_CHECK_EQUAL(mergersTopology[3].outputs.size(), 1);
     BOOST_REQUIRE_EQUAL(mergersTopology[3].outputs[0].origin.str, "TST");
     BOOST_CHECK_EQUAL(mergersTopology[3].outputs[0].description.str, "test");
-    BOOST_CHECK_EQUAL(mergersTopology[3].outputs[0].subSpec, 0);
+    BOOST_CHECK_EQUAL(mergersTopology[3].outputs[0].subSpec.value_or(-1), o2::header::DataHeader::SubSpecificationType(0));
   }
 }

@@ -11,6 +11,7 @@
 #define o2_framework_ConcreteDataMatcher_H_INCLUDED
 
 #include "Headers/DataHeader.h"
+#include <optional>
 
 namespace o2
 {

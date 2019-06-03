@@ -128,7 +128,8 @@ framework::WorkflowSpec MergerInfrastructureBuilder::generateInfrastructure()
 
       auto merger = mergerBuilder.buildSpec();
 
-      nextLayerInputs.push_back({ "in", merger.outputs.at(0).origin, merger.outputs.at(0).description, merger.outputs.at(0).subSpec });
+      // fixme: behave accordingly when the input is a range
+      nextLayerInputs.push_back({ "in", merger.outputs.at(0).origin, merger.outputs.at(0).description, merger.outputs.at(0).subSpec.value() });
 
       workflow.emplace_back(std::move(merger));
     }

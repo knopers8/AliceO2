@@ -25,7 +25,8 @@ namespace workflows
 // Method to convert an OutputSpec in a Output.
 o2f::Output getOutput(const o2f::OutputSpec outputSpec)
 {
-  return o2f::Output{ outputSpec.origin, outputSpec.description, outputSpec.subSpec, outputSpec.lifetime };
+  //fixme: outputSpec.subSpec.value()
+  return o2f::Output{ outputSpec.origin, outputSpec.description, outputSpec.subSpec.value(), outputSpec.lifetime };
 }
 
 // This method can convert a vector of OutputSpec into a vector of Output.

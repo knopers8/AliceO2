@@ -12,6 +12,7 @@
 
 #include "Headers/DataHeader.h"
 #include "Framework/Lifetime.h"
+#include <optional>
 
 namespace o2
 {
@@ -29,7 +30,7 @@ struct OutputSpec {
   OutputLabel binding;
   header::DataOrigin origin;
   header::DataDescription description;
-  header::DataHeader::SubSpecificationType subSpec = 0;
+  std::optional<header::DataHeader::SubSpecificationType> subSpec = 0;
   enum Lifetime lifetime = Lifetime::Timeframe;
 
   OutputSpec(OutputLabel const& inBinding, header::DataOrigin inOrigin, header::DataDescription inDescription,
