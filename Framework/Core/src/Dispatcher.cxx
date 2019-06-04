@@ -64,7 +64,7 @@ void Dispatcher::init(InitContext& ctx)
         std::cerr << "elapsed_time_ms " << elapsed_time_ms << " or number_of_passed_messages " << number_of_passed_messages << " wrong" << std::endl;
       } else {
         LOG(INFO) << "elapsed_time_ms " << elapsed_time_ms << " or number_of_passed_messages " << number_of_passed_messages;
-        file << std::setw(20) << number_of_passed_messages * 1000 / elapsed_time_ms;
+        file << std::setw(20) << number_of_passed_messages * 1000.0 / elapsed_time_ms;
       }
     } else {
       std::cerr << "could not open file for benchmark results" << std::endl;

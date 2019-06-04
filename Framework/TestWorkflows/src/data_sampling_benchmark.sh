@@ -17,17 +17,21 @@ for payload_size in ${PAYLOAD_SIZE[@]}; do
   for nb_producers in ${NB_PRODUCERS[@]}; do
     for usleep_time in ${USLEEP_TIME[@]}; do
       for nb_dispatchers in ${NB_DISPATCHERS[@]}; do
-        echo "***************************
-        Launching test for payload size $payload_size bytes, $nb_producers producers, $usleep_time us of their sleeptime, $nb_dispatchers dispatchers"
+        for run in {1..5}
+        do
+          echo "***************************
+          Launching test for payload size $payload_size bytes, $nb_producers producers, $usleep_time us of their sleeptime, $nb_dispatchers dispatchers"
 
-        printf "%20s," "$payload_size" >> data-sampling-benchmark
-        printf "%21s," "$nb_producers" >> data-sampling-benchmark
-        printf "%21s," "$usleep_time" >> data-sampling-benchmark
-        printf "%21s," "$nb_dispatchers" >> data-sampling-benchmark
+          printf "%20s," "$payload_size" >> data-sampling-benchmark
+          printf "%21s," "$nb_producers" >> data-sampling-benchmark
+          printf "%21s," "$usleep_time" >> data-sampling-benchmark
+          printf "%21s," "$nb_dispatchers" >> data-sampling-benchmark
 
-        timeout -k 60s 8m dataSamplingBenchmark -q -b --monitoring-backend no-op:// --infologger-severity info --payload-size $payload_size --producers $nb_producers --dispatchers $nb_dispatchers --usleep $usleep_time
-        pkill -9 -f dataSamplingBenchmark
-        printf "\n" >> data-sampling-benchmark
+          #timeout -k 60s 8m dataSamplingBenchmark -q -b --monitoring-backend no-op:// --infologger-severity info --payload-size $payload_size --producers $nb_producers --dispatchers $nb_dispatchers --usleep $usleep_time
+          timeout -k 60s 8m dataSamplingBenchmark -q -b --infologger-severity info --payload-size $payload_size --producers $nb_producers --dispatchers $nb_dispatchers --usleep $usleep_time
+          pkill -9 -f dataSamplingBenchmark
+          printf "\n" >> data-sampling-benchmark
+        done
       done
     done
   done

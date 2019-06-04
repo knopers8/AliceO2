@@ -905,7 +905,7 @@ int runStateMachine(DataProcessorSpecs const& workflow,
           driverInfo.states.push_back(DriverState::GUI);
         }
         {
-          // usleep(1000); // We wait for 1 millisecond between one processing
+          usleep(1000); // We wait for 1 millisecond between one processing
                         // and the other.
           auto inputProcessingStart = std::chrono::high_resolution_clock::now();
           auto inputProcessingLatency = inputProcessingStart - inputProcessingLast;
