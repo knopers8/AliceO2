@@ -19,12 +19,12 @@
 #include "Framework/DataProcessingHeader.h"
 #include "Framework/DataSpecUtils.h"
 #include "Framework/CallbackService.h"
+#include "Framework/Logger.h"
 
 #include <Monitoring/Monitoring.h>
 #include <Configuration/ConfigurationInterface.h>
 #include <Configuration/ConfigurationFactory.h>
 #include <fairmq/FairMQDevice.h>
-#include <fairmq/FairMQLogger.h>
 
 #include <chrono>
 #include <Framework/ControlService.h>
