@@ -89,12 +89,12 @@ void Dispatcher::run(ProcessingContext& ctx)
   for (const auto& input : ctx.inputs()) {
     if (input.header != nullptr && input.spec != nullptr) {
       const auto* inputHeader = header::get<header::DataHeader*>(input.header);
-      ConcreteDataMatcher inputMatcher{ inputHeader->dataOrigin, inputHeader->dataDescription, inputHeader->subSpecification };
+      ConcreteDataMatcher inputMatcher{inputHeader->dataOrigin, inputHeader->dataDescription, inputHeader->subSpecification};
 
       for (auto& policy : mPolicies) {
         // todo: consider getting the outputSpec in match to improve performance
         // todo: consider matching (and deciding) in completion policy to save some time
-        if (policy->match(*input.spec)) {
+        if (policy->match(inputMatcher)) {
           
           if(policy->decide(input)) {
 
@@ -134,8 +134,7 @@ DataSamplingHeader Dispatcher::prepareDataSamplingHeader(const DataSamplingPolic
     sampleTime,
     policy.getTotalAcceptedMessages(),
     policy.getTotalEvaluatedMessages(),
-    id
-  };
+    id};
 }
 
 void Dispatcher::send(DataAllocator& dataAllocator, const DataRef& inputData, Output&& output) const
@@ -152,10 +151,10 @@ void Dispatcher::sendFairMQ(FairMQDevice* device, const DataRef& inputData, cons
   const auto* dph = header::get<DataProcessingHeader*>(inputData.header);
   assert(dph);
 
-  header::DataHeader dhout{ dh->dataDescription, dh->dataOrigin, dh->subSpecification, dh->payloadSize };
+  header::DataHeader dhout{dh->dataDescription, dh->dataOrigin, dh->subSpecification, dh->payloadSize};
   dhout.payloadSerializationMethod = dh->payloadSerializationMethod;
-  DataProcessingHeader dphout{ dph->startTime, dph->duration };
-  o2::header::Stack headerStack{ dhout, dphout, dsHeader };
+  DataProcessingHeader dphout{dph->startTime, dph->duration};
+  o2::header::Stack headerStack{dhout, dphout, dsHeader};
 
   auto channelAlloc = o2::pmr::getTransportAllocator(device->Transport());
   FairMQMessagePtr msgHeaderStack = o2::pmr::getMessage(std::move(headerStack), channelAlloc);
@@ -175,8 +174,7 @@ void Dispatcher::sendFairMQ(FairMQDevice* device, const DataRef& inputData, cons
 void Dispatcher::registerPath(const std::pair<InputSpec, OutputSpec>& path)
 {
   //todo: take care of inputs inclusive in others, when subSpec matchers are supported
-  auto cmp = [a = path.first](const InputSpec b)
-  {
+  auto cmp = [a = path.first](const InputSpec b) {
     return a.matcher == b.matcher && a.lifetime == b.lifetime;
   };
 
