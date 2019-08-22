@@ -168,7 +168,7 @@ size_t readToMessage(void* p, size_t size, size_t nmemb, void* userdata)
 /// \todo for the moment we always go to CCDB every time we are expired.
 /// \todo this should really be done in the common fetcher.
 /// \todo provide a way to customize the namespace from the ProcessingContext
-ExpirationHandler::Handler LifetimeHelpers::fetchFromCCDBCache(ConcreteDataMatcher const& matcher, std::string const& prefix, std::string const& sourceChannel)
+ExpirationHandler::Handler LifetimeHelpers::fetchFromCCDBCache(ConcreteDataTypeMatcher const& matcher, std::string const& prefix, std::string const& sourceChannel)
 {
   return [matcher, sourceChannel, serverUrl = prefix](ServiceRegistry& services, PartRef& ref, uint64_t timestamp) -> void {
     // We should invoke the handler only once.
@@ -211,7 +211,7 @@ ExpirationHandler::Handler LifetimeHelpers::fetchFromCCDBCache(ConcreteDataMatch
     DataHeader dh;
     dh.dataOrigin = matcher.origin;
     dh.dataDescription = matcher.description;
-    dh.subSpecification = matcher.subSpec;
+    dh.subSpecification = 0;
     // FIXME: should use curl_off_t and CURLINFO_SIZE_DOWNLOAD_T, but
     //        apparently not there on some platforms.
     double dl;

@@ -405,6 +405,31 @@ InputSpec DataSpecUtils::matchingInput(OutputSpec const& spec)
                     spec.matcher);
 }
 
+OutputSpec DataSpecUtils::matchingOutput(InputSpec const& spec)
+{
+  return std::visit(overloaded{
+                      [&spec](ConcreteDataMatcher const& concrete) -> OutputSpec {
+                        return OutputSpec{
+                          {spec.binding},
+                          concrete.origin,
+                          concrete.description,
+                          concrete.subSpec,
+                          spec.lifetime};
+                      },
+                      [&spec](DataDescriptorMatcher const& dataType) -> OutputSpec {
+                        auto state = extractMatcherInfo(dataType);
+                        if (state.hasUniqueOrigin && state.hasUniqueDescription) {
+                          return OutputSpec{
+                            {spec.binding},
+                            {state.origin,
+                             state.description},
+                            spec.lifetime};
+                        }
+                        throw std::runtime_error("Could not extract data type from query");
+                      }},
+                    spec.matcher);
+}
+
 std::optional<header::DataHeader::SubSpecificationType> DataSpecUtils::getOptionalSubSpec(OutputSpec const& spec)
 {
   return std::visit(overloaded{

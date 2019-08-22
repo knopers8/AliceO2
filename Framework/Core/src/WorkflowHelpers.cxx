@@ -137,8 +137,8 @@ void addMissingOutputsToReader(std::vector<OutputSpec> const& providedOutputs,
     if (provided != providedOutputs.end()) {
       continue;
     }
-    auto concrete = DataSpecUtils::asConcreteDataMatcher(requested);
-    publisher.outputs.emplace_back(OutputSpec{concrete.origin, concrete.description, concrete.subSpec});
+
+    publisher.outputs.emplace_back(DataSpecUtils::matchingOutput(requested));
   }
 }
 

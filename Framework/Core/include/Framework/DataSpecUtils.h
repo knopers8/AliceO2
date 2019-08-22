@@ -127,6 +127,10 @@ struct DataSpecUtils {
   /// OutputSpec
   static InputSpec matchingInput(OutputSpec const& spec);
 
+  /// Create an OutputSpec which is able to match all the inputs of the given
+  /// InputSpec
+  static OutputSpec matchingOutput(InputSpec const& spec);
+
   /// Get the subspec, if available
   static std::optional<header::DataHeader::SubSpecificationType> getOptionalSubSpec(OutputSpec const& spec);
 

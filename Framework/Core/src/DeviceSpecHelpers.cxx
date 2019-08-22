@@ -20,6 +20,7 @@
 #include "Framework/ChannelConfigurationPolicy.h"
 #include "Framework/ChannelMatching.h"
 #include "Framework/ConfigParamsHelper.h"
+#include "Framework/DataSpecUtils.h"
 #include "Framework/DeviceControl.h"
 #include "Framework/DeviceSpec.h"
 #include "Framework/Lifetime.h"
@@ -84,13 +85,9 @@ struct ExpirationHandlerHelpers {
 
   static InputRoute::ExpirationConfigurator expiringConditionConfigurator(InputSpec const& spec, std::string const& sourceChannel)
   {
-    /// FIXME: seems convoluted... Maybe there is a way to avoid all this checking???
-    auto m = std::get_if<ConcreteDataMatcher>(&spec.matcher);
-    if (m == nullptr) {
-      throw std::runtime_error("InputSpec for Conditions must be fully qualified");
-    }
+    auto matcher = DataSpecUtils::asConcreteDataTypeMatcher(spec);
 
-    return [s = spec, matcher = *m, sourceChannel](ConfigParamRegistry const& options) {
+    return [s = spec, matcher, sourceChannel](ConfigParamRegistry const& options) {
       auto serverUrl = options.get<std::string>("condition-backend");
       return LifetimeHelpers::fetchFromCCDBCache(matcher, serverUrl, sourceChannel);
     };
