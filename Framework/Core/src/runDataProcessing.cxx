@@ -835,6 +835,24 @@ int runStateMachine(DataProcessorSpecs const& workflow,
           return 1;
         }
         break;
+      case DriverState::MATERIALISE_PARTIAL_WORKFLOW:
+        try {
+          std::vector<ComputingResource> resources = resourceManager->getAvailableResources();
+          DeviceSpecHelpers::dataProcessorSpecs2DeviceSpecs(workflow,
+                                                            driverInfo.channelPolicies,
+                                                            driverInfo.completionPolicies,
+                                                            driverInfo.dispatchPolicies,
+                                                            deviceSpecs,
+                                                            resources, true);
+          // This should expand nodes so that we can build a consistent DAG.
+        } catch (std::runtime_error& e) {
+          std::cerr << "Invalid workflow: " << e.what() << std::endl;
+          return 1;
+        } catch (...) {
+          std::cerr << "Unknown error while materialising workflow";
+          return 1;
+        }
+        break;
       case DriverState::DO_CHILD:
         // We do not start the process if by default we are stopped.
         if (driverControl.defaultStopped) {
@@ -1111,6 +1129,19 @@ void initialiseDriverControl(bpo::variables_map const& varmap,
       DriverState::SCHEDULE,                //
       DriverState::IMPORT_CURRENT_WORKFLOW, //
       DriverState::MATERIALISE_WORKFLOW     //
+    };
+  } else if (varmap.count("id") && varmap["run"].as<bool>() == true) {
+    // FIXME: for the time being each child needs to recalculate the workflow,
+    //        so that it can understand what it needs to do. This is obviously
+    //        a bad idea. In the future we should have the client be pushed
+    //        it's own configuration by the driver.
+
+    // Try to run the process with given 'id' even when a workflow has dangling I/Os.
+    // This way, the o2-control does not have include any other parts of the full workflow.
+    control.forcedTransitions = {
+      DriverState::DO_CHILD,                    //
+      DriverState::IMPORT_CURRENT_WORKFLOW,     //
+      DriverState::MATERIALISE_PARTIAL_WORKFLOW //
     };
   } else if (varmap.count("id")) {
     // FIXME: for the time being each child needs to recalculate the workflow,

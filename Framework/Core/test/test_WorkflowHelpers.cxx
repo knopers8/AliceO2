@@ -209,7 +209,7 @@ BOOST_AUTO_TEST_CASE(TestSimpleConnection)
   WorkflowHelpers::injectServiceDevices(workflow);
   WorkflowHelpers::constructGraph(workflow, logicalEdges,
                                   outputs,
-                                  availableForwardsInfo);
+                                  availableForwardsInfo, false);
   std::vector<DeviceConnectionEdge> expectedEdges{
     {2, 0, 0, 0, 1, 0, false, ConnectionKind::Out},
     {0, 1, 0, 0, 0, 0, false, ConnectionKind::Out},
@@ -249,7 +249,7 @@ BOOST_AUTO_TEST_CASE(TestSimpleForward)
   WorkflowHelpers::injectServiceDevices(workflow);
   WorkflowHelpers::constructGraph(workflow, logicalEdges,
                                   outputs,
-                                  availableForwardsInfo);
+                                  availableForwardsInfo, false);
 
   std::vector<DeviceConnectionEdge> expectedEdges{
     {4, 0, 0, 0, 1, 0, false, ConnectionKind::Out},
@@ -305,7 +305,7 @@ BOOST_AUTO_TEST_CASE(TestGraphConstruction)
   WorkflowHelpers::injectServiceDevices(workflow);
   WorkflowHelpers::constructGraph(workflow, logicalEdges,
                                   outputs,
-                                  availableForwardsInfo);
+                                  availableForwardsInfo, false);
   std::vector<ConcreteDataMatcher> expectedMatchers = {
     ConcreteDataMatcher{"TST", "A", 0},
     ConcreteDataMatcher{"TST", "B", 0},
@@ -432,7 +432,7 @@ BOOST_AUTO_TEST_CASE(TestExternalInput)
   BOOST_CHECK_EQUAL(workflow.size(), 3);
   WorkflowHelpers::constructGraph(workflow, logicalEdges,
                                   outputs,
-                                  availableForwardsInfo);
+                                  availableForwardsInfo, false);
 }
 
 BOOST_AUTO_TEST_CASE(DetermineDanglingOutputs)

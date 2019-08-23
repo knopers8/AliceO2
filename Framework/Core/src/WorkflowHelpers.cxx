@@ -329,7 +329,8 @@ void WorkflowHelpers::injectServiceDevices(WorkflowSpec& workflow)
 void WorkflowHelpers::constructGraph(const WorkflowSpec& workflow,
                                      std::vector<DeviceConnectionEdge>& logicalEdges,
                                      std::vector<OutputSpec>& outputs,
-                                     std::vector<LogicalForwardInfo>& forwardedInputsInfo)
+                                     std::vector<LogicalForwardInfo>& forwardedInputsInfo,
+                                     bool allowUnsatisfiedInputs)
 {
   assert(!workflow.empty());
   // This is the state. Oif is the iterator I use for the searches.
@@ -502,7 +503,7 @@ void WorkflowHelpers::constructGraph(const WorkflowSpec& workflow,
         }
         findNextOutputFor(consumer, input);
       }
-      if (noMatchingOutputFound()) {
+      if (noMatchingOutputFound() && !allowUnsatisfiedInputs) {
         errorDueToMissingOutputFor(consumer, input);
       }
       appendForwardsToPossibleOutputs();

@@ -148,10 +148,9 @@ struct WorkflowHelpers {
   // dangling inputs are satisfied.
   static void injectServiceDevices(WorkflowSpec& workflow);
 
-  static void constructGraph(const WorkflowSpec& workflow,
-                             std::vector<DeviceConnectionEdge>& logicalEdges,
-                             std::vector<OutputSpec>& outputs,
-                             std::vector<LogicalForwardInfo>& availableForwardsInfo);
+  static void constructGraph(const WorkflowSpec& workflow, std::vector<DeviceConnectionEdge>& logicalEdges,
+                             std::vector<OutputSpec>& outputs, std::vector<LogicalForwardInfo>& forwardedInputsInfo,
+                             bool allowUnsatisfiedInputs = false);
 
   // FIXME: this is an implementation detail for compute edge action,
   //        actually. It should be moved to the cxx. Comes handy for testing things though..

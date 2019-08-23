@@ -562,7 +562,8 @@ void DeviceSpecHelpers::dataProcessorSpecs2DeviceSpecs(WorkflowSpec const& workf
                                                        std::vector<CompletionPolicy> const& completionPolicies,
                                                        std::vector<DispatchPolicy> const& dispatchPolicies,
                                                        std::vector<DeviceSpec>& devices,
-                                                       std::vector<ComputingResource>& resources)
+                                                       std::vector<ComputingResource>& resources,
+                                                       bool allowUnsatisfiedInputs)
 {
 
   std::vector<LogicalForwardInfo> availableForwardsInfo;
@@ -576,7 +577,7 @@ void DeviceSpecHelpers::dataProcessorSpecs2DeviceSpecs(WorkflowSpec const& workf
   std::vector<OutputSpec> outputs;
 
   WorkflowHelpers::verifyWorkflow(workflow);
-  WorkflowHelpers::constructGraph(workflow, logicalEdges, outputs, availableForwardsInfo);
+  WorkflowHelpers::constructGraph(workflow, logicalEdges, outputs, availableForwardsInfo, allowUnsatisfiedInputs);
 
   // We need to instanciate one device per (me, timeIndex) in the
   // DeviceConnectionEdge. For each device we need one new binding

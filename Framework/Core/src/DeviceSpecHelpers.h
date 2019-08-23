@@ -39,13 +39,13 @@ namespace framework
 struct DeviceSpecHelpers {
   /// Helper to convert from an abstract dataflow specification, @a workflow,
   /// to an actual set of devices which will have to run.
-  static void dataProcessorSpecs2DeviceSpecs(
-    const WorkflowSpec& workflow,
-    std::vector<ChannelConfigurationPolicy> const& channelPolicies,
-    std::vector<CompletionPolicy> const& completionPolicies,
-    std::vector<DispatchPolicy> const& dispatchPolicies,
-    std::vector<DeviceSpec>& devices,
-    std::vector<ComputingResource>& resources);
+  static void dataProcessorSpecs2DeviceSpecs(WorkflowSpec const& workflow,
+                                             std::vector<ChannelConfigurationPolicy> const& channelPolicies,
+                                             std::vector<CompletionPolicy> const& completionPolicies,
+                                             std::vector<DispatchPolicy> const& dispatchPolicies,
+                                             std::vector<DeviceSpec>& devices,
+                                             std::vector<ComputingResource>& resources,
+                                             bool allowUnsatisfiedInputs = false);
 
   static void dataProcessorSpecs2DeviceSpecs(
     const WorkflowSpec& workflow,
@@ -55,7 +55,8 @@ struct DeviceSpecHelpers {
     std::vector<ComputingResource>& resources)
   {
     std::vector<DispatchPolicy> dispatchPolicies = DispatchPolicy::createDefaultPolicies();
-    dataProcessorSpecs2DeviceSpecs(workflow, channelPolicies, completionPolicies, dispatchPolicies, devices, resources);
+    dataProcessorSpecs2DeviceSpecs(workflow, channelPolicies, completionPolicies, dispatchPolicies, devices, resources,
+                                   false);
   }
 
   /// Helper to prepare the arguments which will be used to
