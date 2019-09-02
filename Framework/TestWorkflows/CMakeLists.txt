@@ -108,6 +108,16 @@ o2_add_executable(datasampling-time-pipeline
                   PUBLIC_LINK_LIBRARIES O2::Framework
                   COMPONENT_NAME TestWorkflows)
 
+o2_add_executable(a
+        SOURCES src/test_WorkflowA.cxx
+        PUBLIC_LINK_LIBRARIES O2::Framework
+        COMPONENT_NAME TestWorkflows)
+
+o2_add_executable(b
+        SOURCES src/test_WorkflowB.cxx
+        PUBLIC_LINK_LIBRARIES O2::Framework
+        COMPONENT_NAME TestWorkflows)
+
 if(BUILD_SIMULATION)
   o2_add_executable(
     ITSClusterizers
