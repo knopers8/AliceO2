@@ -50,7 +50,7 @@ void Merger::init(framework::InitContext& ictx)
   if (mConfig.publicationDecision.value == PublicationDecision::EachNSeconds) {
     // Register a device callback which creates timeslice in the TimesliceIndex
     // each N seconds, so it can serve as timer input.
-    ictx.services().get<CallbackService>().set(CallbackService::Id::ClockTick, prepareTimerCallback(ictx));
+//    ictx.services().get<CallbackService>().set(CallbackService::Id::ClockTick, prepareTimerCallback(ictx));
   }
 }
 
