@@ -21,10 +21,14 @@
 #include "Mergers/MergeInterface.h"
 
 #include <Framework/Task.h>
-
 #include <TObject.h>
 
 #include <memory>
+
+namespace o2::monitoring
+{
+class Monitoring;
+}
 
 namespace o2
 {
@@ -65,6 +69,11 @@ class Merger : public framework::Task
   MergerCache mCache;
   std::unique_ptr<TObject> mMergedObjects;
   MergerConfig mConfig;
+  std::unique_ptr<monitoring::Monitoring> mCollector;
+
+  // stats
+  int mTotalObjectsMerged = 0;
+  int mObjectsMerged = 0;
 };
 
 } // namespace experimental::mergers

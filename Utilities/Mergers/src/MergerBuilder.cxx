@@ -13,9 +13,10 @@
 ///
 /// \author Piotr Konopka, piotr.jan.konopka@cern.ch
 
-#include <Framework/DeviceSpec.h>
+#include "Framework/DeviceSpec.h"
 #include "Framework/DataSpecUtils.h"
 #include <Framework/CompletionPolicyHelpers.h>
+#include <Monitoring/Monitoring.h>
 
 #include "Mergers/MergerBuilder.h"
 #include "Mergers/Merger.h"

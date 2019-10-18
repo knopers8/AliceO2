@@ -18,6 +18,7 @@
 
 #include <Framework/TimesliceIndex.h>
 #include <Framework/CallbackService.h>
+#include <Monitoring/MonitoringFactory.h>
 
 #include <TObjArray.h>
 #include <TH1.h>
@@ -40,6 +41,8 @@ Merger::Merger(const MergerConfig& config, const header::DataHeader::SubSpecific
     mSubSpec(subSpec),
     mCache(config.ownershipMode.value == OwnershipMode::Full)
 {
+  mCollector = monitoring::MonitoringFactory::Get("infologger:///debug?qc");
+  //  mCollector->enableProcessMonitoring();
 }
 
 void Merger::init(framework::InitContext& ictx)
@@ -183,6 +186,7 @@ void Merger::mergeCache()
           //          LOG(ERROR) << "Merging object of type " << className << " failed";
           return;
         }
+        mObjectsMerged += unpackedCollectionsOfObjects[k].GetEntries();
       }
 
       break;
@@ -202,8 +206,10 @@ void Merger::mergeCache()
             assert(mMergedObjects);
             if (entryAsCollection) {
               reinterpret_cast<TCollection*>(mMergedObjects.get())->AddAll(entryAsCollection);
+              mObjectsMerged += entryAsCollection->GetEntries();
             } else {
               reinterpret_cast<TCollection*>(mMergedObjects.get())->Add(entry.obj.get());
+              mObjectsMerged++;
             }
           }
         }
@@ -228,6 +234,11 @@ void Merger::publish(framework::DataAllocator& allocator)
       // so we do here.
       mMergedObjects.reset();
     }
+
+    mTotalObjectsMerged += mObjectsMerged;
+    mCollector->send({mTotalObjectsMerged, "total_objects_merged"}, monitoring::DerivedMetricMode::RATE);
+    mCollector->send({mObjectsMerged, "object_merged_since_last_publication"});
+    mObjectsMerged = 0;
   }
 }
 
