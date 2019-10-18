@@ -56,6 +56,7 @@ class Merger : public framework::Task
   std::function<void()> prepareTimerCallback(framework::InitContext& ictx) const;
   std::vector<TObject*> unpackObjects(TObject* obj);
   void mergeCache();
+  void mergeNow(framework::ProcessingContext&);
   void publish(framework::DataAllocator& allocator);
 
   void cleanCacheAfterMerging();

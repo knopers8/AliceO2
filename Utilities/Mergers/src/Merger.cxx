@@ -57,20 +57,22 @@ void Merger::init(framework::InitContext& ictx)
 
 void Merger::run(framework::ProcessingContext& ctx)
 {
-  mCache.cacheInputRecord(ctx.inputs());
+//  mCache.cacheInputRecord(ctx.inputs());
+//
+//  if (shouldMergeCache(ctx)) {
+//
+//    mergeCache();
+//
+//    cleanCacheAfterMerging();
+//  }
 
-  if (shouldMergeCache(ctx)) {
-
-    mergeCache();
-
-    cleanCacheAfterMerging();
-  }
+  mergeNow(ctx);
 
   if (shouldPublish(ctx)) {
 
     publish(ctx.outputs());
 
-    cleanCacheAfterPublishing();
+//    cleanCacheAfterPublishing();
 
     if (mConfig.timespan.value == Timespan::LastDifference) {
       mMergedObjects.reset();
@@ -115,6 +117,145 @@ void Merger::cleanCacheAfterPublishing()
     mCache.setAllMerged(false);
   }
   mCache.setAllUpdated(false);
+}
+
+static void deleteTCollections(TObject* obj)
+{
+  // this is not probably the optimal approach, but it should be ok for now
+  if (auto c = dynamic_cast<TCollection*>(obj)) {
+    c->SetOwner(false);
+    auto iter = c->MakeIterator();
+    while (auto element = iter->Next()) {
+      deleteTCollections(element);
+    }
+  } else {
+    delete obj;
+  }
+}
+
+void Merger::mergeNow(o2::framework::ProcessingContext& ctx)
+{
+  switch (mConfig.mergingMode.value) {
+    case MergingMode::Binwise: {
+
+      auto timerPosition = ctx.inputs().getPos("timer-publish");
+//      bool shift = false;
+
+      size_t i = 0;
+      if (!mMergedObjects) {
+        for (int i = 0; i < ctx.inputs().size(); ++i) {
+          if (timerPosition == i) {
+//            shift = true;
+            continue;
+          }
+          auto input = ctx.inputs().getByPos(i);
+          if (input.header && input.payload) {
+            mMergedObjects = framework::DataRefUtils::as<TObject>(input);// = std::move(std::make_unique<TObject>(framework::DataRefUtils::as<TObject>(input).release()));
+            break;
+          }
+        }
+      }
+
+      if (!mMergedObjects) {
+        LOG(INFO) << "mergeCache(): Inputs are empty, nothing to merge.";
+        return;
+      }
+
+      auto unpackedMergedObjects = unpackObjects(mMergedObjects.get());
+      std::vector<TObjArray> unpackedCollectionsOfObjects(unpackedMergedObjects.size());
+
+      for (; i < ctx.inputs().size(); ++i) {
+        if (timerPosition == i) {
+          continue;
+        }
+        auto input = ctx.inputs().getByPos(i);
+        if (input.header && input.payload) {
+          auto unpackedCachedObjects = unpackObjects(framework::DataRefUtils::as<TObject>(input).release());
+          assert(unpackedMergedObjects.size() == unpackedCachedObjects.size());
+
+          for (int j = 0; j < unpackedCachedObjects.size(); j++) {
+            unpackedCollectionsOfObjects[j].Add(unpackedCachedObjects[j]);
+          }
+        }
+      }
+
+      for (int k = 0; k < unpackedMergedObjects.size(); k++) {
+
+        TObject* mergedObject = unpackedMergedObjects[k];
+        const char* className = mergedObject->ClassName();
+        Long64_t errorCode = 0;
+
+        //todo: investigate -NOCHECK flag for histogram merging
+        auto objectMergeInterface = dynamic_cast<MergeInterface*>(mergedObject);
+        if (objectMergeInterface) {
+          errorCode = objectMergeInterface->merge(&unpackedCollectionsOfObjects[k]);
+        } else if (strncmp(className, "TH1", 3) == 0) {
+          errorCode = reinterpret_cast<TH1*>(mergedObject)->Merge(&unpackedCollectionsOfObjects[k]);
+        } else if (strncmp(className, "TH2", 3) == 0) {
+          errorCode = reinterpret_cast<TH2*>(mergedObject)->Merge(&unpackedCollectionsOfObjects[k]);
+        } else if (strncmp(className, "TH3", 3) == 0) {
+          errorCode = reinterpret_cast<TH3*>(mergedObject)->Merge(&unpackedCollectionsOfObjects[k]);
+        } else if (strncmp(className, "THn", 3) == 0) {
+          errorCode = reinterpret_cast<THn*>(mergedObject)->Merge(&unpackedCollectionsOfObjects[k]);
+        } else if (strncmp(className, "THnSparse", 8) == 0) {
+          errorCode = reinterpret_cast<THnSparse*>(mergedObject)->Merge(&unpackedCollectionsOfObjects[k]);
+        } else if (strcmp(className, "TTree") == 0) {
+          errorCode = reinterpret_cast<TTree*>(mergedObject)->Merge(&unpackedCollectionsOfObjects[k]);
+        } else {
+          //          LOG(ERROR) << "Object with type " << className << " is not one of mergeable type.";
+          throw std::runtime_error("Object with type '" + std::string(className) + "' is not one of mergeable type.");
+          // todo: maybe it is fine to just overwrite?
+        }
+
+        if (errorCode == -1) {
+          throw std::runtime_error("Binwise merging object of type '" + std::string(className) + "' failed.");
+          //          LOG(ERROR) << "Merging object of type " << className << " failed";
+          return;
+        }
+        mObjectsMerged += unpackedCollectionsOfObjects[k].GetEntries();
+
+        for (auto& array : unpackedCollectionsOfObjects) {
+          array.SetOwner(false);
+          for (TObject* obj : array) {
+            deleteTCollections(obj);
+          }
+        }
+
+      }
+
+      break;
+    }
+    case MergingMode::Concatenate: {
+
+      if (!mMergedObjects) {
+        mMergedObjects = std::make_unique<TObjArray>();
+      }
+      for (const auto& queue : mCache) {
+        for (const auto& entry : queue.deque) {
+          if (!entry.is_merged) {
+
+            //todo: optimisations - check only once if this is a collection
+            //todo: optimisations - TCollection::Merge() falls back to slow TMethodCall! (from mikolaj's presentation)
+            TCollection* entryAsCollection = dynamic_cast<TCollection*>(entry.obj.get());
+            assert(mMergedObjects);
+            if (entryAsCollection) {
+              reinterpret_cast<TCollection*>(mMergedObjects.get())->AddAll(entryAsCollection);
+              mObjectsMerged += entryAsCollection->GetEntries();
+            } else {
+              reinterpret_cast<TCollection*>(mMergedObjects.get())->Add(entry.obj.get());
+              mObjectsMerged++;
+            }
+          }
+        }
+      }
+
+      break;
+    }
+    case MergingMode::Timewise:
+      throw std::runtime_error("MergingMode::Timewise not supported yet");
+    default:
+      break;
+  }
 }
 
 void Merger::mergeCache()
