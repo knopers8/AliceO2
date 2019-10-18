@@ -133,6 +133,10 @@ WorkflowSpec defineDataProcessing(ConfigContext const& config)
             std::string bins = "BINS:";
             for (int i = 1; i <= histo->GetNbinsX(); i++) {
               bins += " " + std::to_string((int) histo->GetBinContent(i));
+              if (i >= 100) {
+                LOG(INFO) << "Trimming the output to 100 entries, total is: " << histo->GetNbinsX();
+                break;
+              }
             }
             LOG(INFO) << bins;
           };
