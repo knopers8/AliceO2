@@ -72,17 +72,9 @@ WorkflowSpec defineDataProcessing(ConfigContext const& config)
   std::string configurationSource = std::string("json://") + getenv("BASEDIR") + "/../../O2/Framework/TestWorkflows/src/dataSamplingBenchmark.json";
   DataSampling::GenerateInfrastructure(specs, configurationSource, dispatchers);
 
-  std::vector<InputSpec> sinkInputs;
-  for (size_t i = 0; i < producers; i++) {
-    sinkInputs.push_back(InputSpec{
-      "tst" + std::to_string(i),
-      DataSamplingPolicy::createPolicyDataOrigin(),
-      DataSamplingPolicy::createPolicyDataDescription("benchmark", 0),
-      i});
-  }
   DataProcessorSpec podDataSink{
     "dataSink",
-    sinkInputs,
+    Inputs{{ "tst", { DataSamplingPolicy::createPolicyDataOrigin(), DataSamplingPolicy::createPolicyDataDescription("benchmark", 0) }}},
     Outputs{},
     AlgorithmSpec{
       (AlgorithmSpec::ProcessCallback) [](ProcessingContext& processingContext){

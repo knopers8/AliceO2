@@ -1,4 +1,5 @@
 {
+  "testDuration": "300",
   "dataSamplingPolicies": [
     {
       "id": "benchmark",

@@ -86,7 +86,7 @@ void Dispatcher::init(InitContext& ctx)
 void Dispatcher::run(ProcessingContext& ctx)
 {
   static auto start = steady_clock::now();
-
+  static int testDuration = ConfigurationFactory::getConfiguration(mReconfigurationSource)->get<int>("testDuration", 300) * 1000;
   for (const auto& input : ctx.inputs()) {
     if (input.header != nullptr && input.spec != nullptr) {
       const auto* inputHeader = header::get<header::DataHeader*>(input.header);
@@ -108,7 +108,6 @@ void Dispatcher::run(ProcessingContext& ctx)
               output.metaHeader = { output.metaHeader, dsHeader };
               send(ctx.outputs(), input, std::move(output));
             }
-            number_of_passed_messages++;
           }
           number_of_passed_messages++;
         }
@@ -119,7 +118,8 @@ void Dispatcher::run(ProcessingContext& ctx)
   auto now = steady_clock::now();
   auto diff = duration_cast<milliseconds>(now - start).count();
 
-  if ( diff > 300*1000) {
+  if (diff > testDuration) {
+    LOG(INFO) << "diff: " << diff << ", test duration: " << testDuration;
     elapsed_time_ms = diff;
     ctx.services().get<ControlService>().readyToQuit(true);
   }
