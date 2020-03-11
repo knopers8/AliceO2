@@ -16,6 +16,7 @@
 #include "Framework/DeviceSpec.h"
 #include "Framework/DataSpecUtils.h"
 #include <Framework/CompletionPolicyHelpers.h>
+#include <Framework/CompletionPolicy.h>
 #include <Monitoring/Monitoring.h>
 
 #include "Mergers/MergerBuilder.h"
@@ -96,8 +97,8 @@ framework::DataProcessorSpec MergerBuilder::buildSpec()
 
 void MergerBuilder::customizeInfrastructure(std::vector<framework::CompletionPolicy>& policies)
 {
-  // merger is identified by the ID string and should always consume
-  policies.push_back(CompletionPolicyHelpers::defineByName(MergerBuilder::mergerIdString(), CompletionPolicy::CompletionOp::Consume));
+  // each merger's name contains the common ID string and should always consume
+  policies.push_back(CompletionPolicyHelpers::defineByName(".*" + MergerBuilder::mergerIdString() + ".*", CompletionPolicy::CompletionOp::Consume));
 }
 
 } // namespace experimental::mergers
