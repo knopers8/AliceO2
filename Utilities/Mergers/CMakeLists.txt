@@ -31,6 +31,11 @@ o2_add_executable(benchmark-topology
                   COMPONENT_NAME mergers
                   PUBLIC_LINK_LIBRARIES O2::Mergers)
 
+o2_add_executable(benchmark-empty-loop
+                  SOURCES test/benchmark_EmptyLoop.cxx
+                  COMPONENT_NAME mergers
+                  PUBLIC_LINK_LIBRARIES O2::Mergers)
+
 o2_add_test(InfrastructureBuilder
             SOURCES test/test_InfrastructureBuilder.cxx
             COMPONENT_NAME mergers
