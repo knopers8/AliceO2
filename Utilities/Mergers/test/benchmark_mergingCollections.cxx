@@ -12,9 +12,17 @@
 #include <TObjArray.h>
 #include <TH1.h>
 #include <TH2.h>
+#include <TH3.h>
 #include <THn.h>
 #include <TTree.h>
 #include <THnSparse.h>
+#include <TF1.h>
+#include <TF2.h>
+#include <TF3.h>
+#include <TRandom.h>
+#include <TRandomGen.h>
+
+#define BENCHMARK_RANGE_COLLECTIONS Arg(1)->Arg(1 << 2)->Arg(1 << 4)->Arg(1 << 6)->Arg(1 << 8)->Arg(1 << 10)->Arg(1 << 12)
 
 // A simple test where an input is provided
 // and the subsequent InputRecord is immediately requested.
@@ -31,30 +39,139 @@ static void BM_RelayMessageCreation(benchmark::State& state)
   }
 }
 
-BENCHMARK(BM_RelayMessageCreation);
+//BENCHMARK(BM_RelayMessageCreation);
 
-static void BM_mergingCollectionsTH1F(benchmark::State& state) {
+static void BM_mergingCollectionsTH1F(benchmark::State& state)
+{
 
   size_t collectionSize = state.range(0);
-  size_t bins = 1000;
+  size_t bins = 62500; // makes 250kB
 
   TCollection* collection = new TObjArray();
   collection->SetOwner(true);
+  TF1* uni = new TF1("uni", "1", 0, 1000000);
   for (size_t i = 0; i < collectionSize; i++) {
     TH1F* h = new TH1F(("test" + std::to_string(i)).c_str(), "test", bins, 0, 1000000);
-    h->FillRandom("gaus", 5000); // with that enabled, the benchmark cannot exit.
+    h->FillRandom("uni", 50000);
     collection->Add(h);
   }
 
-  TH1F* m = new TH1F();
+  TH1F* m = new TH1F("merged", "merged", bins, 0, 1000000);
 
   for (auto _ : state) {
-    m->Merge(collection);
+    m->Merge(collection, "-NOCHECK");
+  }
+
+  delete collection;
+  delete m;
+  delete uni;
+}
+BENCHMARK(BM_mergingCollectionsTH1F)->BENCHMARK_RANGE_COLLECTIONS;
+
+static void BM_mergingCollectionsTH2F(benchmark::State& state)
+{
+
+  size_t collectionSize = state.range(0);
+  size_t bins = 250; // 250 bins * 250 bins * 4B makes 250kB
+
+  TCollection* collection = new TObjArray();
+  collection->SetOwner(true);
+  TF2* uni = new TF2("uni", "1", 0, 1000000, 0, 1000000);
+  for (size_t i = 0; i < collectionSize; i++) {
+    TH2F* h = new TH2F(("test" + std::to_string(i)).c_str(), "test", bins, 0, 1000000, bins, 0, 1000000);
+    h->FillRandom("uni", 50000);
+    collection->Add(h);
+  }
+
+  TH2F* m = new TH2F("merged", "merged", bins, 0, 1000000, bins, 0, 1000000);
+
+  for (auto _ : state) {
+    m->Merge(collection, "-NOCHECK");
   }
 
   delete collection;
   delete m;
 }
-BENCHMARK(BM_mergingCollectionsTH1F)->Arg(1)->Arg(1 << 2)->Arg(1 << 4)->Arg(1 << 6)->Arg(1 << 8)->Arg(1 << 10)->Arg(1 << 12);
+//BENCHMARK(BM_mergingCollectionsTH2F)->BENCHMARK_RANGE_COLLECTIONS;
+
+static void BM_mergingCollectionsTH3F(benchmark::State& state)
+{
+  size_t collectionSize = state.range(0);
+  size_t bins = 40; // 250 bins * 250 bins * 250 bins * 4B makes 256kB
+
+  TCollection* collection = new TObjArray();
+  collection->SetOwner(true);
+  TF3* uni = new TF3("uni", "1", 0, 1000000, 0, 1000000, 0, 1000000);
+  for (size_t i = 0; i < collectionSize; i++) {
+    TH3F* h = new TH3F(("test" + std::to_string(i)).c_str(), "test",
+                       bins, 0, 1000000,
+                       bins, 0, 1000000,
+                       bins, 0, 1000000);
+    h->FillRandom("uni", 50000);
+    collection->Add(h);
+  }
+
+  TH3F* m = new TH3F("merged", "merged", bins, 0, 1000000, bins, 0, 1000000, bins, 0, 1000000);
+
+  for (auto _ : state) {
+    m->Merge(collection, "-NOCHECK");
+  }
+
+  delete collection;
+  delete m;
+}
+//BENCHMARK(BM_mergingCollectionsTH3F)->BENCHMARK_RANGE_COLLECTIONS;
+
+static void BM_mergingCollectionsTHNSparse(benchmark::State& state)
+{
+  size_t collectionSize = state.range(0);
+
+  const Double_t min = 0.0;
+  const Double_t max = 1000000.0;
+  const size_t dim = 10;
+  const Int_t bins = 250; // 250 bins * 250 bins * 250 bins * 4B makes 256kB
+  const Int_t binsDims[dim] = {bins, bins, bins, bins, bins, bins, bins, bins, bins, bins};
+  const Double_t mins[dim] = { min, min, min, min, min, min, min, min, min, min};
+  const Double_t maxs[dim] = { max, max, max, max, max, max, max, max, max, max};
+
+  TRandomMT64 gen;
+  gen.SetSeed(14304234);
+  Double_t randomArray[dim];
+
+  for (auto _ : state) {
+
+    state.PauseTiming();
+    TCollection* collection = new TObjArray();
+    collection->SetOwner(true);
+    for (size_t i = 0; i < collectionSize; i++) {
+
+      auto* h = new THnSparseF(("test" + std::to_string(i)).c_str(), "test", dim, binsDims, mins, maxs);
+      for (size_t entry = 0; entry < 50000; entry++) {
+        gen.RndmArray(dim, randomArray);
+        for (double r : randomArray) {
+          r *= max;
+        }
+        h->Fill(randomArray);
+      }
+      collection->Add(h);
+    }
+    auto* m = new THnSparseF("merged", "merged", dim, binsDims, mins, maxs);
+
+    state.ResumeTiming();
+    m->Merge(collection);
+
+    state.PauseTiming();
+
+    delete collection;
+    delete m;
+  }
+}
+//BENCHMARK(BM_mergingCollectionsTHNSparse)->BENCHMARK_RANGE_COLLECTIONS;
+
+
+
+
+
+
 
 BENCHMARK_MAIN();
