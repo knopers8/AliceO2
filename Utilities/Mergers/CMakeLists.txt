@@ -41,3 +41,13 @@ o2_add_test(InfrastructureBuilder
             COMPONENT_NAME mergers
             PUBLIC_LINK_LIBRARIES O2::Mergers
             LABELS utils)
+
+foreach(b
+        mergingCollections
+        )
+    o2_add_test(benchmark_${b} NAME test_Mergers_benchmark_${b}
+            SOURCES test/benchmark_${b}.cxx
+            COMPONENT_NAME Mergers
+            LABELS framework benchmark
+            PUBLIC_LINK_LIBRARIES O2::Mergers benchmark::benchmark)
+endforeach()
