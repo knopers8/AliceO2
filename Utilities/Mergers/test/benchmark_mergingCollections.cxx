@@ -22,6 +22,12 @@
 #include <TRandom.h>
 #include <TRandomGen.h>
 
+#include <boost/histogram.hpp>
+
+namespace bh = boost::histogram;
+
+#include <ctime>
+
 #define BENCHMARK_RANGE_COLLECTIONS Arg(1)->Arg(1 << 2)->Arg(1 << 4)->Arg(1 << 6)->Arg(1 << 8)->Arg(1 << 10)->Arg(1 << 12)
 
 // A simple test where an input is provided
@@ -135,7 +141,7 @@ static void BM_mergingCollectionsTHNSparse(benchmark::State& state)
   const Double_t maxs[dim] = { max, max, max, max, max, max, max, max, max, max};
 
   TRandomMT64 gen;
-  gen.SetSeed(14304234);
+  gen.SetSeed(std::time(nullptr));
   Double_t randomArray[dim];
 
   for (auto _ : state) {
@@ -168,10 +174,96 @@ static void BM_mergingCollectionsTHNSparse(benchmark::State& state)
 }
 //BENCHMARK(BM_mergingCollectionsTHNSparse)->BENCHMARK_RANGE_COLLECTIONS;
 
+static void BM_mergingPODCollections(benchmark::State& state)
+{
+  size_t collectionSize = state.range(0);
+  size_t bins = 62500; // makes 250kB
 
+  std::vector<std::vector<float>*> collection;
+  TF1* uni = new TF1("uni", "1", 0, 1000000);
 
+  const size_t randoms = 50000;
+  TRandomMT64 gen;
+  gen.SetSeed(std::time(nullptr));
+  Double_t randomArray[randoms];
 
+  for (size_t i = 0; i < collectionSize; i++) {
+    auto* v = new std::vector<float>(bins, 0);
+    gen.RndmArray(randoms, randomArray);
+    for (double r : randomArray) {
+      size_t idx = r * bins;
+      if (idx != bins) {
+        (*v)[idx] += 1;
+      }
+    }
+    collection.push_back(v);
+  }
 
+  auto* m = new std::vector<float>(bins, 0);
 
+  auto merge = [&](size_t i) {
+    auto* v = collection[i];
+    for (size_t b = 0; b < bins; b++) {
+      (*m)[b] += (*v)[b];
+    }
+  };
+
+  for (auto _ : state) {
+    for (size_t i = 0; i < collectionSize; i++) {
+      merge(i);
+    }
+  }
+
+  for (size_t i = 0; i < collectionSize; i++) {
+    delete collection[i];
+  }
+  delete m;
+  delete uni;
+}
+BENCHMARK(BM_mergingPODCollections)->BENCHMARK_RANGE_COLLECTIONS;
+
+static void BM_mergingBoostCollections(benchmark::State& state)
+{
+  const double min = 0.0;
+  const double max = 1000000.0;
+  const size_t collectionSize = state.range(0);
+  const size_t bins = 62500; // makes 250kB
+
+  auto merged = bh::make_histogram(bh::axis::regular<>(bins, min, max, "x"));
+
+  std::vector<decltype(merged)> collection;
+  TF1* uni = new TF1("uni", "1", 0, 1000000);
+
+  const size_t randoms = 50000;
+  TRandomMT64 gen;
+  gen.SetSeed(std::time(nullptr));
+  Double_t randomArray[randoms];
+
+  for (size_t i = 0; i < collectionSize; i++) {
+    //    auto* v = new std::vector<float>(bins, 0);
+    collection.emplace_back(std::move(bh::make_histogram(bh::axis::regular<>(bins, min, max, "x"))));
+
+    auto& h = collection.back();
+    static_assert(std::is_reference<decltype(h)>::value);
+
+    gen.RndmArray(randoms, randomArray);
+    for (double r : randomArray) {
+      h(r * max);
+    }
+  }
+
+  auto merge = [&](size_t i) {
+    merged += collection[i];
+  };
+
+  for (auto _ : state) {
+    for (size_t i = 0; i < collectionSize; i++) {
+      merge(i);
+    }
+  }
+
+  delete uni;
+}
+BENCHMARK(BM_mergingBoostCollections)->BENCHMARK_RANGE_COLLECTIONS;
 
 BENCHMARK_MAIN();
