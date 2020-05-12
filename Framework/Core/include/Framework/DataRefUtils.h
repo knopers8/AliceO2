@@ -69,6 +69,15 @@ struct DataRefUtils {
         auto* requestedClass = RSS::TClass::GetClass(typeid(T));
         // should always have the class description if has_root_dictionary is true
         assert(requestedClass != nullptr);
+        // that also returns true if storedClass == requestedClass
+        if (!storedClass->InheritsFrom(requestedClass)) {
+          std::ostringstream ss;
+          ss << "The requested class with name "
+             << requestedClass->GetName()
+             << " does not match the stored class with name "
+             << (storedClass != nullptr ? storedClass->GetName() : "<unknown>");
+          throw std::runtime_error(ss.str());
+        }
 
         auto* object = ftm.ReadObjectAny(storedClass);
         if (object == nullptr) {
@@ -138,6 +147,16 @@ struct DataRefUtils {
         }
 
         typename RSS::FairTMessage ftm(const_cast<char*>(ref.payload), header->payloadSize);
+        auto* storedClass = ftm.GetClass();
+        // that also returns true if storedClass == requestedClass
+        if (!storedClass->InheritsFrom(cl)) {
+          std::ostringstream ss;
+          ss << "The requested class with name "
+             << cl->GetName()
+             << " does not match the stored class with name "
+             << (storedClass != nullptr ? storedClass->GetName() : "<unknown>");
+          throw std::runtime_error(ss.str());
+        }
         result.reset(static_cast<wrapped*>(ftm.ReadObjectAny(cl)));
         if (result.get() == nullptr) {
           std::ostringstream ss;
