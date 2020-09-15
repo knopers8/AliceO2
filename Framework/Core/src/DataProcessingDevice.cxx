@@ -271,10 +271,14 @@ void on_signal_callback(uv_signal_t* handle, int signum)
   LOG(debug) << "Signal " << signum << " received.";
 }
 
+#include <mutex>
+std::mutex regionMutex;
+
 void DataProcessingDevice::InitTask()
 {
   for (auto& channel : fChannels) {
     channel.second.at(0).Transport()->SubscribeToRegionEvents([& pendingRegionInfos = mPendingRegionInfos](FairMQRegionInfo info) {
+      std::lock_guard<std::mutex> lock(regionMutex);
       LOG(debug) << ">>> Region info event" << info.event;
       LOG(debug) << "id: " << info.id;
       LOG(debug) << "ptr: " << info.ptr;
