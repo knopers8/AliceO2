@@ -147,11 +147,11 @@ inline std::tuple<TimesliceIndex::ActionTaken, TimesliceSlot> TimesliceIndex::re
     return std::make_tuple(ActionTaken::DropInvalid, TimesliceSlot{TimesliceSlot::INVALID});
   }
 
-  if (*newTimestamp > *oldTimestamp) {
+//  if (*newTimestamp > *oldTimestamp) {
     mVariables[oldestSlot.index] = newContext;
     return std::make_tuple(ActionTaken::ReplaceObsolete, oldestSlot);
-  }
-  return std::make_tuple(ActionTaken::DropObsolete, TimesliceSlot{TimesliceSlot::INVALID});
+//  }
+//  return std::make_tuple(ActionTaken::DropObsolete, TimesliceSlot{TimesliceSlot::INVALID});
 }
 
 } // namespace framework
