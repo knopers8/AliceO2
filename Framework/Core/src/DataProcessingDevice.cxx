@@ -522,10 +522,10 @@ void DataProcessingDevice::doPrepare(DataProcessorContext& context)
     // still return -2. To avoid this we keep receiving on the socket until
     // we get a message, consume all the consecutive messages, and then go back
     // to the usual loop.
-    do {
+   // do {
       if (events & 1) {
         bool oneMessage = false;
-        while (true) {
+     //   while (true) {
           FairMQParts parts;
           result = fairMQChannel.Receive(parts, 0);
           if (result >= 0) {
@@ -540,12 +540,12 @@ void DataProcessingDevice::doPrepare(DataProcessorContext& context)
               break;
             }
           }
-        }
+    //    }
       } else {
         break;
       }
       socket.Events(&events);
-    } while (events & 1);
+  //  } while (events & 1);
   }
 }
 
