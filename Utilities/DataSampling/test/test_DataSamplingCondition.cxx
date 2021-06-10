@@ -72,6 +72,51 @@ BOOST_AUTO_TEST_CASE(DataSamplingConditionRandom)
   }
 }
 
+BOOST_AUTO_TEST_CASE(DataSamplingConditionRandomFast)
+{
+  auto conditionRandom = DataSamplingConditionFactory::create("randomFast");
+  BOOST_REQUIRE(conditionRandom);
+
+  boost::property_tree::ptree config;
+  config.put("fraction", "0.5");
+  config.put("seed", "943753948");
+  conditionRandom->configure(config);
+
+  // PRNG should behave the same every time and on every machine.
+  // Of course, the test does not cover full range of timesliceIDs, but at least gives an idea about its determinism.
+  {
+    std::vector<bool> correctDecision{
+      true, true, false, true, true, true, true, true, true, false, false, true, true, true, true, false, false, false, false, false, true, false, false, true, false, false, true, false, false, true, false, false, true, false, true, false, false, true, true, true, true, false, true, true, false, false, false, true, true};
+    for (DataProcessingHeader::StartTime id = 1; id < 50; id++) {
+      DataProcessingHeader dph{id, 0};
+      o2::header::Stack headerStack{dph};
+      DataRef dr{nullptr, reinterpret_cast<const char*>(headerStack.data()), nullptr};
+      BOOST_CHECK_EQUAL(correctDecision[id - 1], conditionRandom->decide(dr));
+    }
+  }
+
+  // random access check
+  {
+    std::vector<std::pair<DataProcessingHeader::StartTime, bool>> correctDecision{
+      {222, false},
+      {222, false},
+      {222, false},
+      {230, false},
+      {210, false},
+      {230, false},
+      {250, true},
+      {251, true},
+      {222, false},
+      {230, false}};
+    for (const auto& check : correctDecision) {
+      DataProcessingHeader dph{check.first, 0};
+      o2::header::Stack headerStack{dph};
+      DataRef dr{nullptr, reinterpret_cast<const char*>(headerStack.data()), nullptr};
+      BOOST_CHECK_EQUAL(check.second, conditionRandom->decide(dr));
+    }
+  }
+}
+
 BOOST_AUTO_TEST_CASE(DataSamplingConditionPayloadSize)
 {
   auto conditionPayloadSize = DataSamplingConditionFactory::create("payloadSize");

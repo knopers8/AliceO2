@@ -18,19 +18,13 @@ o2_add_library(DataSampling
                          src/DataSamplingConditionNConsecutive.cxx
                          src/DataSamplingConditionPayloadSize.cxx
                          src/DataSamplingConditionRandom.cxx
+                         src/DataSamplingConditionRandomFast.cxx
                          src/DataSamplingHeader.cxx
                          src/DataSamplingPolicy.cxx
                          src/DataSamplingReadoutAdapter.cxx
                          src/Dispatcher.cxx
 
   PUBLIC_LINK_LIBRARIES O2::Framework O2::DataSampling)
-
-#o2_target_root_dictionary(
-#  Mergers
-#  HEADERS include/Mergers/MergeInterface.h
-#  include/Mergers/CustomMergeableObject.h
-#          include/Mergers/CustomMergeableTObject.h
-#  LINKDEF include/Mergers/LinkDef.h)
 
 # tests with input data
 

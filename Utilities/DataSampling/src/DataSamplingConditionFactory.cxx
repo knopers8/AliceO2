@@ -26,6 +26,8 @@ std::unique_ptr<DataSamplingCondition> DataSamplingConditionFactory::create(std:
 {
   if (name == "random" || name == "DataSamplingConditionRandom") {
     return createDataSamplingConditionRandom();
+  } else if (name == "randomFast" || name == "DataSamplingConditionRandomFast") {
+    return createDataSamplingConditionRandomFast();
   } else if (name == "payloadSize" || name == "DataSamplingConditionPayloadSize") {
     return createDataSamplingConditionPayloadSize();
   } else if (name == "nConsecutive" || name == "DataSamplingConditionNConsecutive") {
