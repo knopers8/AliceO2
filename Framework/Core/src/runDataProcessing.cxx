@@ -1955,7 +1955,7 @@ void overrideLabels(ConfigContext& ctx, WorkflowSpec& workflow)
 {
   struct LabelsSpec {
     std::string_view matcher;
-    std::vector<std::string_view> labels;
+    std::vector<std::string> labels;
   };
   std::vector<LabelsSpec> specs;
 
@@ -1990,7 +1990,7 @@ void overrideLabels(ConfigContext& ctx, WorkflowSpec& workflow)
       if (label.empty()) {
         throw std::runtime_error("bad labels definition. Syntax <processor>:<label>[:<label>][,<processor>:<label>[:<label>]");
       }
-      spec.labels.push_back(label);
+      spec.labels.emplace_back(label);
       labelDelimPos = labelEnd;
     } while (labelEnd != std::string_view::npos);
 
@@ -2008,7 +2008,7 @@ void overrideLabels(ConfigContext& ctx, WorkflowSpec& workflow)
         for (const auto& label : spec.labels) {
           if (std::find_if(processor.labels.begin(), processor.labels.end(),
                            [label](const auto& procLabel) { return procLabel.value == label; }) == processor.labels.end()) {
-            processor.labels.push_back({std::string{label}});
+            processor.labels.push_back({label});
           }
         }
       }
