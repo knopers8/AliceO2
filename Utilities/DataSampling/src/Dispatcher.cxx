@@ -73,26 +73,34 @@ void Dispatcher::init(InitContext& ctx)
 
 void Dispatcher::run(ProcessingContext& ctx)
 {
-  for (const auto& input : InputRecordWalker(ctx.inputs())) {
+  // todo: consider matching (and deciding) in completion policy to save some time
 
-    const auto* inputHeader = header::get<header::DataHeader*>(input.header);
+  for (auto inputIt = ctx.inputs().begin(); inputIt != ctx.inputs().end(); inputIt++) {
+
+    const DataRef& firstPart = inputIt.getByPos(0);
+    if (firstPart.header == nullptr) {
+      continue;
+    }
+    const auto* inputHeader = header::get<header::DataHeader*>(firstPart.header);
     ConcreteDataMatcher inputMatcher{inputHeader->dataOrigin, inputHeader->dataDescription, inputHeader->subSpecification};
 
     for (auto& policy : mPolicies) {
-      // todo: consider getting the outputSpec in match to improve performance
-      // todo: consider matching (and deciding) in completion policy to save some time
+      if (policy->match(inputMatcher)) {
+        for (const auto& part : inputIt) {
+          if (part.header != nullptr && policy->decide(part)) {
+            // We copy every header which is not DataHeader or DataProcessingHeader,
+            // so that custom data-dependent headers are passed forward,
+            // and we add a DataSamplingHeader.
+            header::Stack headerStack{
+              std::move(extractAdditionalHeaders(part.header)),
+              std::move(prepareDataSamplingHeader(*policy.get(), ctx.services().get<const DeviceSpec>()))};
 
-      if (policy->match(inputMatcher) && policy->decide(input)) {
-        // We copy every header which is not DataHeader or DataProcessingHeader,
-        // so that custom data-dependent headers are passed forward,
-        // and we add a DataSamplingHeader.
-        header::Stack headerStack{
-          std::move(extractAdditionalHeaders(input.header)),
-          std::move(prepareDataSamplingHeader(*policy.get(), ctx.services().get<const DeviceSpec>()))};
-
-        Output output = policy->prepareOutput(inputMatcher, input.spec->lifetime);
-        output.metaHeader = std::move(header::Stack{std::move(output.metaHeader), std::move(headerStack)});
-        send(ctx.outputs(), input, std::move(output));
+            // fixme this stinks as well.
+            Output output = policy->prepareOutput(inputMatcher, part.spec->lifetime);
+            output.metaHeader = std::move(header::Stack{std::move(output.metaHeader), std::move(headerStack)});
+            send(ctx.outputs(), part, std::move(output));
+          }
+        }
       }
     }
   }
@@ -112,8 +120,10 @@ void Dispatcher::reportStats(Monitoring& monitoring) const
     dispatcherTotalAcceptedMessages += policy->getTotalAcceptedMessages();
   }
 
-  monitoring.send({dispatcherTotalEvaluatedMessages, "Dispatcher_messages_evaluated"});
-  monitoring.send({dispatcherTotalAcceptedMessages, "Dispatcher_messages_passed"});
+  monitoring.send({dispatcherTotalEvaluatedMessages, "Dispatcher_messages_evaluated", Verbosity::Prod});
+  monitoring.send({dispatcherTotalAcceptedMessages, "Dispatcher_messages_passed", Verbosity::Prod});
+  LOG(INFO) << "Dispatcher_messages_evaluated: " << dispatcherTotalEvaluatedMessages;
+  LOG(INFO) << "Dispatcher_messages_passed: " << dispatcherTotalAcceptedMessages;
 }
 
 DataSamplingHeader Dispatcher::prepareDataSamplingHeader(const DataSamplingPolicy& policy, const DeviceSpec& spec)
