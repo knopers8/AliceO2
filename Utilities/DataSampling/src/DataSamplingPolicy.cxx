@@ -103,7 +103,7 @@ DataSamplingPolicy DataSamplingPolicy::fromConfiguration(const ptree& config)
   return policy;
 }
 
-const framework::OutputSpec* DataSamplingPolicy::match(const ConcreteDataMatcher& input) const
+const framework::OutputSpec* DataSamplingPolicy::match(const InputSpec& input) const
 {
   const auto it = mPaths.find(input);
   return it != mPaths.end() ? &(it->second) : nullptr;
@@ -124,13 +124,13 @@ bool DataSamplingPolicy::decide(const o2::framework::DataRef& dataRef)
 
 Output DataSamplingPolicy::prepareOutput(const ConcreteDataMatcher& input, Lifetime lifetime) const
 {
-  auto result = mPaths.find(input);
-  if (result != mPaths.end()) {
-    auto dataType = DataSpecUtils::asConcreteDataTypeMatcher(result->second);
-    return Output{dataType.origin, dataType.description, input.subSpec, lifetime};
-  } else {
+//  auto result = mPaths.find(input);
+//  if (result != mPaths.end()) {
+//    auto dataType = DataSpecUtils::asConcreteDataTypeMatcher(result->second);
+//    return Output{dataType.origin, dataType.description, input.subSpec, lifetime};
+//  } else {
     return Output{header::gDataOriginInvalid, header::gDataDescriptionInvalid};
-  }
+//  }
 }
 
 const std::string& DataSamplingPolicy::getName() const

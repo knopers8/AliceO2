@@ -46,7 +46,7 @@ using namespace o2::header;
 
 BOOST_AUTO_TEST_CASE(DataSamplingPolicyFromConfiguration)
 {
-  using boost::property_tree::ptree;
+/*  using boost::property_tree::ptree;
 
   ptree config;
   config.put("id", "my_policy");
@@ -112,7 +112,7 @@ BOOST_AUTO_TEST_CASE(DataSamplingPolicyFromConfiguration)
     BOOST_CHECK((*map.find(ConcreteDataMatcher{"TST", "CHLEB", 33})).second == (OutputSpec{{"TST", "CHLEB_S"}}));
     BOOST_CHECK((*map.find(ConcreteDataMatcher{"TST", "MLEKO", 33})).second == (OutputSpec{{"TST", "MLEKO_S"}}));
     BOOST_CHECK_EQUAL(map.size(), 2);
-  }
+  } */
 }
 
 BOOST_AUTO_TEST_CASE(DataSamplingPolicyFromMethods)
