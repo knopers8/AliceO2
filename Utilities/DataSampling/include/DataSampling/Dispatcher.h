@@ -66,7 +66,7 @@ class Dispatcher : public framework::Task
   DataSamplingHeader prepareDataSamplingHeader(const DataSamplingPolicy& policy, const framework::DeviceSpec& spec);
   header::Stack extractAdditionalHeaders(const char* inputHeaderStack) const;
   void reportStats(monitoring::Monitoring& monitoring) const;
-  void send(framework::DataAllocator& dataAllocator, const framework::DataRef& inputData, framework::Output&& output) const;
+  void send(framework::DataAllocator& dataAllocator, const framework::DataRef& inputData, const framework::Output& output) const;
 
   std::string mName;
   std::string mReconfigurationSource;

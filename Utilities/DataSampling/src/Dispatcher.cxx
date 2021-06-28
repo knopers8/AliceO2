@@ -86,7 +86,7 @@ void Dispatcher::run(ProcessingContext& ctx)
     ConcreteDataMatcher inputMatcher{inputHeader->dataOrigin, inputHeader->dataDescription, inputHeader->subSpecification};
 
     for (auto& policy : mPolicies) {
-      if (policy->match(inputMatcher)) {
+      if (auto route = policy->match(inputMatcher); route != nullptr) {
         for (const auto& part : inputIt) {
           if (part.header != nullptr && policy->decide(part)) {
             // We copy every header which is not DataHeader or DataProcessingHeader,
@@ -94,11 +94,18 @@ void Dispatcher::run(ProcessingContext& ctx)
             // and we add a DataSamplingHeader.
             header::Stack headerStack{
               std::move(extractAdditionalHeaders(part.header)),
-              std::move(prepareDataSamplingHeader(*policy.get(), ctx.services().get<const DeviceSpec>()))};
+              std::move(prepareDataSamplingHeader(*policy, ctx.services().get<const DeviceSpec>()))};
 
-            // fixme this stinks as well.
-            Output output = policy->prepareOutput(inputMatcher, part.spec->lifetime);
-            output.metaHeader = std::move(header::Stack{std::move(output.metaHeader), std::move(headerStack)});
+            auto routeAsConcreteDataType = DataSpecUtils::asConcreteDataTypeMatcher(*route);
+            Output output{
+              routeAsConcreteDataType.origin,
+              routeAsConcreteDataType.description,
+              inputMatcher.subSpec,
+              part.spec->lifetime,
+              std::move(headerStack)
+            };
+//            Output output = policy->prepareOutput(inputMatcher, part.spec->lifetime);
+//            output.metaHeader = std::move(header::Stack{std::move(output.metaHeader), std::move(headerStack)});
             send(ctx.outputs(), part, std::move(output));
           }
         }
@@ -156,7 +163,7 @@ header::Stack Dispatcher::extractAdditionalHeaders(const char* inputHeaderStack)
   return headerStack;
 }
 
-void Dispatcher::send(DataAllocator& dataAllocator, const DataRef& inputData, Output&& output) const
+void Dispatcher::send(DataAllocator& dataAllocator, const DataRef& inputData, const Output& output) const
 {
   const auto* inputHeader = header::get<header::DataHeader*>(inputData.header);
   dataAllocator.snapshot(output, inputData.payload, inputHeader->payloadSize, inputHeader->payloadSerializationMethod);
