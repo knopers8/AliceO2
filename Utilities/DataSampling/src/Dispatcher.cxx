@@ -70,6 +70,9 @@ void Dispatcher::init(InitContext& ctx)
                 << policyConfig.second.get_optional<std::string>("id").value_or("") << "'";
     }
   }
+
+  auto spec = ctx.services().get<const DeviceSpec>();
+  mDeviceID.runtimeInit(spec.id.substr(0, DataSamplingHeader::deviceIDTypeSize).c_str());
 }
 
 void Dispatcher::run(ProcessingContext& ctx)
@@ -94,7 +97,7 @@ void Dispatcher::run(ProcessingContext& ctx)
             // and we add a DataSamplingHeader.
             header::Stack headerStack{
               std::move(extractAdditionalHeaders(part.header)),
-              std::move(prepareDataSamplingHeader(*policy, ctx.services().get<const DeviceSpec>()))};
+              std::move(prepareDataSamplingHeader(*policy))};
 
             auto routeAsConcreteDataType = DataSpecUtils::asConcreteDataTypeMatcher(*route);
             Output output{
@@ -134,18 +137,15 @@ void Dispatcher::reportStats(Monitoring& monitoring) const
   LOG(INFO) << "Dispatcher_messages_passed: " << dispatcherTotalAcceptedMessages;
 }
 
-DataSamplingHeader Dispatcher::prepareDataSamplingHeader(const DataSamplingPolicy& policy, const DeviceSpec& spec)
+DataSamplingHeader Dispatcher::prepareDataSamplingHeader(const DataSamplingPolicy& policy)
 {
   uint64_t sampleTime = static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count());
-
-  DataSamplingHeader::DeviceIDType id;
-  id.runtimeInit(spec.id.substr(0, DataSamplingHeader::deviceIDTypeSize).c_str());
 
   return {
     sampleTime,
     policy.getTotalAcceptedMessages(),
     policy.getTotalEvaluatedMessages(),
-    id};
+    mDeviceID};
 }
 
 header::Stack Dispatcher::extractAdditionalHeaders(const char* inputHeaderStack) const
