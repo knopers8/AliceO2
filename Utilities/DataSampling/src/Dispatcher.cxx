@@ -83,10 +83,10 @@ void Dispatcher::run(ProcessingContext& ctx)
       continue;
     }
     const auto* inputHeader = header::get<header::DataHeader*>(firstPart.header);
-//    ConcreteDataMatcher inputMatcher{inputHeader->dataOrigin, inputHeader->dataDescription, inputHeader->subSpecification};
+    ConcreteDataMatcher inputMatcher{inputHeader->dataOrigin, inputHeader->dataDescription, inputHeader->subSpecification};
 
     for (auto& policy : mPolicies) {
-      if (auto route = policy->match(*firstPart.spec); route != nullptr) {
+      if (auto route = policy->match(inputMatcher); route != nullptr) {
         for (const auto& part : inputIt) {
           if (part.header != nullptr && policy->decide(part)) {
             // We copy every header which is not DataHeader or DataProcessingHeader,
@@ -100,7 +100,7 @@ void Dispatcher::run(ProcessingContext& ctx)
             Output output{
               routeAsConcreteDataType.origin,
               routeAsConcreteDataType.description,
-              inputHeader->subSpecification,
+              inputMatcher.subSpec,
               part.spec->lifetime,
               std::move(headerStack)
             };

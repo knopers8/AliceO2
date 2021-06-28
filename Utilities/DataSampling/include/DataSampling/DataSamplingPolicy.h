@@ -42,10 +42,10 @@ class DataSamplingPolicy
    public:
     PathMap() = default;
     ~PathMap() = default;
-    const PathVectorBase::const_iterator find(const framework::InputSpec& input) const
+    const PathVectorBase::const_iterator find(const framework::ConcreteDataMatcher& input) const
     {
-      return std::find_if(begin(), end(), [&input](const auto& el) {
-        return framework::DataSpecUtils::includes(el.first, input);
+      return std::find_if(begin(), end(), [input](const auto& el) {
+        return framework::DataSpecUtils::match(el.first, input);
       });
     }
   };
@@ -73,7 +73,7 @@ class DataSamplingPolicy
   void setFairMQOutputChannel(std::string);
 
   /// \brief Returns true if this policy requires data with given InputSpec.
-  const framework::OutputSpec* match(const framework::InputSpec& input) const;
+  const framework::OutputSpec* match(const framework::ConcreteDataMatcher& input) const;
   /// \brief Returns true if user-defined conditions of sampling are fulfilled.
   bool decide(const o2::framework::DataRef&);
   /// \brief Returns Output for given InputSpec to pass data forward.
