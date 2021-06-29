@@ -30,6 +30,8 @@ struct Output {
   header::DataOrigin origin;
   header::DataDescription description;
   header::DataHeader::SubSpecificationType subSpec = 0;
+  header::DataHeader::SplitPayloadIndexType splitIndex = 0;
+  header::DataHeader::SplitPayloadPartsType splitTotal = 0;
   enum Lifetime lifetime = Lifetime::Timeframe;
   header::Stack metaHeader = {};
 

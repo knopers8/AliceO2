@@ -92,6 +92,7 @@ void Dispatcher::run(ProcessingContext& ctx)
 
     for (auto& policy : mPolicies) {
       if (auto route = policy->match(inputMatcher); route != nullptr) {
+        size_t partId = 0;
         for (const auto& part : inputIt) {
           if (part.header != nullptr && policy->decide(part)) {
             // We copy every header which is not DataHeader or DataProcessingHeader,
@@ -109,8 +110,11 @@ void Dispatcher::run(ProcessingContext& ctx)
               part.spec->lifetime,
               std::move(headerStack)
             };
+            output.splitIndex = partId;
+            output.splitTotal = inputHeader->splitPayloadParts;
             send(ctx.outputs(), part, output);
           }
+          partId++;
         }
       }
     }
