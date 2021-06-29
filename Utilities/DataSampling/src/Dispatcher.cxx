@@ -113,8 +113,10 @@ void Dispatcher::reportStats(Monitoring& monitoring) const
     dispatcherTotalAcceptedMessages += policy->getTotalAcceptedMessages();
   }
 
-  monitoring.send({dispatcherTotalEvaluatedMessages, "Dispatcher_messages_evaluated"});
-  monitoring.send({dispatcherTotalAcceptedMessages, "Dispatcher_messages_passed"});
+  monitoring.send({dispatcherTotalEvaluatedMessages, "Dispatcher_messages_evaluated", Verbosity::Prod});
+  monitoring.send({dispatcherTotalAcceptedMessages, "Dispatcher_messages_passed", Verbosity::Prod});
+  LOG(INFO) << "Dispatcher_messages_evaluated: " << dispatcherTotalEvaluatedMessages;
+  LOG(INFO) << "Dispatcher_messages_passed: " << dispatcherTotalAcceptedMessages;
 }
 
 DataSamplingHeader Dispatcher::prepareDataSamplingHeader(const DataSamplingPolicy& policy, const DeviceSpec& spec)

@@ -34,6 +34,7 @@ void customize(std::vector<ConfigParamSpec>& workflowOptions)
 {
   workflowOptions.push_back(ConfigParamSpec{"sampling-fraction", VariantType::Double, 1.0, {"sampling fraction"}});
   workflowOptions.push_back(ConfigParamSpec{"payload-size", VariantType::Int, 10000, {"payload size"}});
+  workflowOptions.push_back(ConfigParamSpec{"parts", VariantType::Int, 1, {"parts per message"}});
   workflowOptions.push_back(ConfigParamSpec{"producers", VariantType::Int, 1, {"number of producers"}});
   workflowOptions.push_back(ConfigParamSpec{"dispatchers", VariantType::Int, 1, {"number of dispatchers"}});
   workflowOptions.push_back(ConfigParamSpec{"usleep", VariantType::Int, 0, {"usleep time of producers"}});
@@ -94,7 +95,7 @@ std::function<size_t(void)> createFreeMemoryGetter(InitContext& ictx)
       channelConfig = options->GetPropertyAsString("channel-config", "");
     }
   }
-  if (!sessionID.empty() && sessionID != "default" && channelConfig.find("transport=shmem") != std::string::npos) {
+  if (false && !sessionID.empty() && sessionID != "default" && channelConfig.find("transport=shmem") != std::string::npos) {
     LOG(INFO) << "The benchmark is running with shared memory,"
                  " producing messages will be throttled by looking at available memory in the segment: "
               << sessionID;
@@ -127,6 +128,7 @@ WorkflowSpec defineDataProcessing(ConfigContext const& config)
 {
   double samplingFraction = config.options().get<double>("sampling-fraction");
   size_t payloadSize = config.options().get<int>("payload-size");
+  size_t parts = config.options().get<int>("parts");
   size_t producers = config.options().get<int>("producers");
   size_t dispatchers = config.options().get<int>("dispatchers");
   size_t usleepTime = config.options().get<int>("usleep");
@@ -193,30 +195,32 @@ WorkflowSpec defineDataProcessing(ConfigContext const& config)
             // Then, it is recommended to use the '--fill' parameter, which prevents Linux from overcommitting
             // the memory by writing on the produced messages before sending (which unfortunately slows down the
             // message production rate).
-            if (*messagesProducedSinceLastCycle < maximumAllowedMessages) {
-              auto data = pctx.outputs().make<char>(Output{ "TST", "RAWDATA", static_cast<SubSpec>(p) }, payloadSize);
-              *messagesProducedSinceLastCycle += 1;
-              if (fill) {
-                memset(data.data(), 0x00, payloadSize);
+            for (size_t part = 0; part < parts; part++) {
+              if (*messagesProducedSinceLastCycle < maximumAllowedMessages) {
+                auto data = pctx.outputs().make<char>(Output{ "TST", "RAWDATA", static_cast<SubSpec>(p) }, payloadSize);
+                *messagesProducedSinceLastCycle += 1;
+                if (fill) {
+                  memset(data.data(), 0x00, payloadSize);
+                }
+              } else if (mightSaturate == nullptr) {
+                // maximumAllowedMessages has been reached, so we check if we should protect the benchmark from asking
+                // for too much memory.
+                sleep(1);
+                // 4 is a magic number - an arbitrary high limit of free memory is 4 times larger than the low limit.
+                mightSaturate = std::make_shared<bool>(getFreeMemory() < 4 * throttlingMB * 1000000);
+              } else if (*mightSaturate == false) {
+                // there is no risk of reaching the maximum available memory,
+                // so we allow for a continuous message production.
+                *messagesProducedSinceLastCycle = 0;
+                maximumAllowedMessages = -1;
+                LOG(INFO) << "The memory usage should not reach the limits, we allow to produce as much messages as possible";
+              } else if (size_t freeMemory = getFreeMemory(); freeMemory > 4 * throttlingMB * 1000000) {
+                // if we are here, then the maximumAllowedMessages has been reached and we have waited until
+                // the memory usage dropped to the safe level again.
+                *messagesProducedSinceLastCycle = 0;
+                maximumAllowedMessages = (freeMemory - throttlingMB * 1000000) / payloadSize / producers;
+                LOG(INFO) << "New cycle, this producer will send " << maximumAllowedMessages << " messages";
               }
-            } else if (mightSaturate == nullptr) {
-              // maximumAllowedMessages has been reached, so we check if we should protect the benchmark from asking
-              // for too much memory.
-              sleep(1);
-              // 4 is a magic number - an arbitrary high limit of free memory is 4 times larger than the low limit.
-              mightSaturate = std::make_shared<bool>(getFreeMemory() < 4 * throttlingMB * 1000000);
-            } else if (*mightSaturate == false) {
-              // there is no risk of reaching the maximum available memory,
-              // so we allow for a continuous message production.
-              *messagesProducedSinceLastCycle = 0;
-              maximumAllowedMessages = -1;
-              LOG(INFO) << "The memory usage should not reach the limits, we allow to produce as much messages as possible";
-            } else if (size_t freeMemory = getFreeMemory(); freeMemory > 4 * throttlingMB * 1000000) {
-              // if we are here, then the maximumAllowedMessages has been reached and we have waited until
-              // the memory usage dropped to the safe level again.
-              *messagesProducedSinceLastCycle = 0;
-              maximumAllowedMessages = (freeMemory - throttlingMB * 1000000) / payloadSize / producers;
-              LOG(INFO) << "New cycle, this producer will send " << maximumAllowedMessages << " messages";
             }
           };
         }
