@@ -1,8 +1,9 @@
-// Copyright CERN and copyright holders of ALICE O2. This software is
-// distributed under the terms of the GNU General Public License v3 (GPL
-// Version 3), copied verbatim in the file "COPYING".
+// Copyright 2019-2020 CERN and copyright holders of ALICE O2.
+// See https://alice-o2.web.cern.ch/copyright for details of the copyright holders.
+// All rights not expressly granted are reserved.
 //
-// See http://alice-o2.web.cern.ch/license for full licensing information.
+// This software is distributed under the terms of the GNU General Public
+// License v3 (GPL Version 3), copied verbatim in the file "COPYING".
 //
 // In applying this license CERN does not waive the privileges and immunities
 // granted to it by virtue of its status as an Intergovernmental Organization
@@ -45,6 +46,7 @@
 #include "Framework/DriverControl.h"
 #include "Framework/CommandInfo.h"
 #include "Framework/RunningWorkflowInfo.h"
+#include "Framework/TopologyPolicy.h"
 #include "DriverServerContext.h"
 #include "ControlServiceHelpers.h"
 #include "HTTPParser.h"
@@ -506,6 +508,7 @@ struct ControlWebSocketHandler : public WebSocketHandler {
     : mContext{context}
   {
   }
+  ~ControlWebSocketHandler() override = default;
 
   /// Invoked at the end of the headers.
   /// as a special header we have "x-dpl-pid" which devices can use
@@ -1106,7 +1109,7 @@ int doChild(int argc, char** argv, ServiceRegistry& serviceRegistry,
   // when the runner is done.
   std::unique_ptr<SimpleRawDeviceService> simpleRawDeviceService;
   std::unique_ptr<DeviceState> deviceState;
-  ComputingQuotaEvaluator quotaEvaluator{loop};
+  std::unique_ptr<ComputingQuotaEvaluator> quotaEvaluator;
 
   auto afterConfigParsingCallback = [&simpleRawDeviceService,
                                      &runningWorkflow,
@@ -1117,16 +1120,18 @@ int doChild(int argc, char** argv, ServiceRegistry& serviceRegistry,
                                      &deviceState,
                                      &errorPolicy,
                                      &loop](fair::mq::DeviceRunner& r) {
+    simpleRawDeviceService = std::make_unique<SimpleRawDeviceService>(nullptr, spec);
+    serviceRegistry.registerService(ServiceRegistryHelpers::handleForService<RawDeviceService>(simpleRawDeviceService.get()));
+
     deviceState = std::make_unique<DeviceState>();
     deviceState->loop = loop;
+    serviceRegistry.registerService(ServiceRegistryHelpers::handleForService<DeviceState>(deviceState.get()));
 
-    simpleRawDeviceService = std::make_unique<SimpleRawDeviceService>(nullptr, spec);
+    quotaEvaluator = std::make_unique<ComputingQuotaEvaluator>(serviceRegistry);
+    serviceRegistry.registerService(ServiceRegistryHelpers::handleForService<ComputingQuotaEvaluator>(quotaEvaluator.get()));
 
-    serviceRegistry.registerService(ServiceRegistryHelpers::handleForService<RawDeviceService>(simpleRawDeviceService.get()));
     serviceRegistry.registerService(ServiceRegistryHelpers::handleForService<DeviceSpec const>(&spec));
     serviceRegistry.registerService(ServiceRegistryHelpers::handleForService<RunningWorkflowInfo const>(&runningWorkflow));
-    serviceRegistry.registerService(ServiceRegistryHelpers::handleForService<ComputingQuotaEvaluator>(&quotaEvaluator));
-    serviceRegistry.registerService(ServiceRegistryHelpers::handleForService<DeviceState>(deviceState.get()));
 
     // The decltype stuff is to be able to compile with both new and old
     // FairMQ API (one which uses a shared_ptr, the other one a unique_ptr.
@@ -1281,6 +1286,7 @@ int runStateMachine(DataProcessorSpecs const& workflow,
   std::vector<ServiceMetricHandling> metricProcessingCallbacks;
   std::vector<ServicePreSchedule> preScheduleCallbacks;
   std::vector<ServicePostSchedule> postScheduleCallbacks;
+  std::vector<ServiceDriverInit> driverInitCallbacks;
 
   serviceRegistry.registerService(ServiceRegistryHelpers::handleForService<DevicesManager>(devicesManager));
 
@@ -1408,6 +1414,9 @@ int runStateMachine(DataProcessorSpecs const& workflow,
         /// there and back into running. This is because the general case
         /// would be that we start an application and then we wait for
         /// resource offers from DDS or whatever resource manager we use.
+        for (auto& callback : driverInitCallbacks) {
+          callback(serviceRegistry, varmap);
+        }
         driverInfo.states.push_back(DriverState::RUNNING);
         //        driverInfo.states.push_back(DriverState::REDEPLOY_GUI);
         LOG(INFO) << "O2 Data Processing Layer initialised. We brake for nobody.";
@@ -1480,6 +1489,14 @@ int runStateMachine(DataProcessorSpecs const& workflow,
             for (auto& service : device.services) {
               if (service.postSchedule) {
                 postScheduleCallbacks.push_back(service.postSchedule);
+              }
+            }
+          }
+          driverInitCallbacks.clear();
+          for (auto& device : runningWorkflow.devices) {
+            for (auto& service : device.services) {
+              if (service.driverInit) {
+                driverInitCallbacks.push_back(service.driverInit);
               }
             }
           }
@@ -1758,6 +1775,7 @@ int runStateMachine(DataProcessorSpecs const& workflow,
           performanceMetrics.push_back("aod-bytes-read-uncompressed");
           performanceMetrics.push_back("aod-bytes-read-compressed");
           performanceMetrics.push_back("aod-file-read-info");
+          performanceMetrics.push_back("table-bytes-.*");
           ResourcesMonitoringHelper::dumpMetricsToJSON(metricsInfos, driverInfo.metrics, runningWorkflow.devices, performanceMetrics);
         }
         // This is a clean exit. Before we do so, if required,
@@ -2202,6 +2220,8 @@ int doMain(int argc, char** argv, o2::framework::WorkflowSpec const& workflow,
 {
   O2_SIGNPOST_INIT();
   std::vector<std::string> currentArgs;
+  std::vector<PluginInfo> plugins;
+
   for (size_t ai = 1; ai < argc; ++ai) {
     currentArgs.push_back(argv[ai]);
   }
@@ -2324,22 +2344,24 @@ int doMain(int argc, char** argv, o2::framework::WorkflowSpec const& workflow,
                      [](OutputSpec const& a, OutputSpec const& b) { return DataSpecUtils::describe(a) < DataSpecUtils::describe(b); });
   }
 
-  // check if DataProcessorSpec at i depends on j
-  auto checkDependencies = [& workflow = physicalWorkflow](int i, int j) {
-    DataProcessorSpec const& a = workflow[i];
-    DataProcessorSpec const& b = workflow[j];
-    for (size_t ii = 0; ii < a.inputs.size(); ++ii) {
-      for (size_t oi = 0; oi < b.outputs.size(); ++oi) {
-        try {
-          if (DataSpecUtils::match(a.inputs[ii], b.outputs[oi])) {
-            return true;
-          }
-        } catch (...) {
-          continue;
-        }
+  std::vector<TopologyPolicy> topologyPolicies = TopologyPolicy::createDefaultPolicies();
+  std::vector<TopologyPolicy::DependencyChecker> dependencyCheckers;
+  dependencyCheckers.reserve(physicalWorkflow.size());
+
+  for (auto& spec : physicalWorkflow) {
+    for (auto& policy : topologyPolicies) {
+      if (policy.matcher(spec)) {
+        dependencyCheckers.push_back(policy.checkDependency);
+        break;
       }
     }
-    return false;
+  }
+  assert(dependencyCheckers.size() == physicalWorkflow.size());
+  // check if DataProcessorSpec at i depends on j
+  auto checkDependencies = [&workflow = physicalWorkflow,
+                            &dependencyCheckers](int i, int j) {
+    TopologyPolicy::DependencyChecker& checker = dependencyCheckers[i];
+    return checker(workflow[i], workflow[j]);
   };
 
   // Create a list of all the edges, so that we can do a topological sort

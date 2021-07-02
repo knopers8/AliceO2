@@ -1,8 +1,9 @@
-// Copyright CERN and copyright holders of ALICE O2. This software is
-// distributed under the terms of the GNU General Public License v3 (GPL
-// Version 3), copied verbatim in the file "COPYING".
+// Copyright 2019-2020 CERN and copyright holders of ALICE O2.
+// See https://alice-o2.web.cern.ch/copyright for details of the copyright holders.
+// All rights not expressly granted are reserved.
 //
-// See http://alice-o2.web.cern.ch/license for full licensing information.
+// This software is distributed under the terms of the GNU General Public
+// License v3 (GPL Version 3), copied verbatim in the file "COPYING".
 //
 // In applying this license CERN does not waive the privileges and immunities
 // granted to it by virtue of its status as an Intergovernmental Organization
@@ -26,6 +27,7 @@
 #include "Framework/ConfigParamRegistry.h"
 #include "Framework/ControlService.h"
 #include "Framework/DataProcessorSpec.h"
+#include "Framework/InputRecordWalker.h"
 #include "Framework/Lifetime.h"
 #include "Framework/Output.h"
 #include "Framework/Task.h"
@@ -39,6 +41,7 @@
 
 #include "DataFormatsMCH/Digit.h"
 #include "MCHRawCommon/DataFormats.h"
+#include "MCHRawCommon/CoDecParam.h"
 #include "MCHRawDecoder/DataDecoder.h"
 #include "MCHRawDecoder/ROFFinder.h"
 #include "MCHRawElecMap/Mapper.h"
@@ -73,7 +76,7 @@ class DataDecoderTask
     RdhHandler rdhHandler;
 
     auto ds2manu = ic.options().get<bool>("ds2manu");
-    auto sampaBcOffset = ic.options().get<int>("sampa-bc-offset");
+    auto sampaBcOffset = CoDecParam::Instance().sampaBcOffset;
     mDebug = ic.options().get<bool>("debug");
     mCheckROFs = ic.options().get<bool>("check-rofs");
     mDummyROFs = ic.options().get<bool>("dummy-rofs");
@@ -155,9 +158,44 @@ class DataDecoderTask
     mDecoder->decodeBuffer(buffer);
   }
 
+  void sendEmptyOutput(framework::DataAllocator& output)
+  {
+    decltype(mDecoder->getOrbits()) orbits{};
+    decltype(mDecoder->getDigits()) digits{};
+    std::vector<ROFRecord> rofs;
+    output.snapshot(Output{header::gDataOriginMCH, "DIGITS", 0}, digits);
+    output.snapshot(Output{header::gDataOriginMCH, "DIGITROFS", 0}, rofs);
+    output.snapshot(Output{header::gDataOriginMCH, "ORBITS", 0}, orbits);
+  }
+
+  bool isDroppedTF(framework::ProcessingContext& pc)
+  {
+    /// If we see requested data type input
+    /// with 0xDEADBEEF subspec and 0 payload this means that the
+    /// "delayed message" mechanism created it in absence of real data
+    /// from upstream, i.e. the TF was dropped.
+    constexpr auto origin = header::gDataOriginMCH;
+    o2::framework::InputSpec dummy{"dummy",
+                                   framework::ConcreteDataMatcher{origin,
+                                                                  header::gDataDescriptionRawData,
+                                                                  0xDEADBEEF}};
+    for (const auto& ref : o2::framework::InputRecordWalker(pc.inputs(), {dummy})) {
+      const auto dh = o2::framework::DataRefUtils::getHeader<o2::header::DataHeader*>(ref);
+      if (dh->payloadSize == 0) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   //_________________________________________________________________________________________________
   void run(framework::ProcessingContext& pc)
   {
+    if (isDroppedTF(pc)) {
+      sendEmptyOutput(pc.outputs());
+      return;
+    }
+
     static int32_t deltaMax = 0;
 
     auto createBuffer = [&](auto& vec, size_t& size) {
@@ -247,12 +285,24 @@ class DataDecoderTask
 };
 
 //_________________________________________________________________________________________________
-o2::framework::DataProcessorSpec getDecodingSpec(std::string inputSpec)
+o2::framework::DataProcessorSpec getDecodingSpec(std::string inputSpec,
+                                                 bool askSTFDist)
 {
+  auto inputs = o2::framework::select(inputSpec.c_str());
+  for (auto& inp : inputs) {
+    // mark input as optional in order not to block the workflow
+    // if our raw data happen to be missing in some TFs
+    inp.lifetime = Lifetime::Optional;
+  }
+  if (askSTFDist) {
+    // request the input FLP/DISTSUBTIMEFRAME/0 that is _guaranteed_
+    // to be present, even if none of our raw data is present.
+    inputs.emplace_back("stfDist", "FLP", "DISTSUBTIMEFRAME", 0, o2::framework::Lifetime::Timeframe);
+  }
   o2::mch::raw::DataDecoderTask task(inputSpec);
   return DataProcessorSpec{
     "DataDecoder",
-    o2::framework::select(inputSpec.c_str()),
+    inputs,
     Outputs{OutputSpec{header::gDataOriginMCH, "DIGITS", 0, Lifetime::Timeframe},
             OutputSpec{header::gDataOriginMCH, "DIGITROFS", 0, Lifetime::Timeframe},
             OutputSpec{header::gDataOriginMCH, "ORBITS", 0, Lifetime::Timeframe}},
@@ -262,7 +312,6 @@ o2::framework::DataProcessorSpec getDecodingSpec(std::string inputSpec)
             {"fec-map", VariantType::String, "", {"custom FEC mapping"}},
             {"dummy-elecmap", VariantType::Bool, false, {"use dummy electronic mapping (for debug, temporary)"}},
             {"ds2manu", VariantType::Bool, false, {"convert channel numbering from Run3 to Run1-2 order"}},
-            {"sampa-bc-offset", VariantType::Int, 339986, {"SAMPA bunch-crossing counter at the beginning of the run"}},
             {"check-rofs", VariantType::Bool, false, {"perform consistency checks on the output ROFs"}},
             {"dummy-rofs", VariantType::Bool, false, {"disable the ROFs finding algorithm"}}}};
 }
