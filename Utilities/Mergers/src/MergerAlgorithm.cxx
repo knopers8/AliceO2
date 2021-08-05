@@ -98,7 +98,7 @@ void merge(TObject* const target, TObject* const other)
 
 void deleteTCollections(TObject* obj)
 {
-  LOG(INFO) << "Deleting TObject";
+  LOG(INFO) << "Deleting TObject: " << obj;
   if (auto c = dynamic_cast<TCollection*>(obj)) {
     LOG(INFO) << "It is TCollection";
     c->SetOwner(false);

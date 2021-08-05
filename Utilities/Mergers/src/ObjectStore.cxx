@@ -16,6 +16,7 @@
 
 #include "Mergers/ObjectStore.h"
 #include "Framework/DataRefUtils.h"
+#include <Framework/Logger.h>
 #include "Mergers/MergeInterface.h"
 #include "Mergers/MergerAlgorithm.h"
 #include <TObject.h>
@@ -60,6 +61,7 @@ ObjectStore extractObjectFrom(const framework::DataRef& ref)
   }
 
   auto* object = ftm.ReadObjectAny(storedClass);
+  LOG(INFO) << "Read object any: " << object;
   if (object == nullptr) {
     throw std::runtime_error(
       errorPrefix + "Failed to read object with name '" + storedClass->GetName() + "' from message using ROOT serialization.");

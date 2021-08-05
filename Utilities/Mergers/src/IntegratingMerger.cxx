@@ -57,6 +57,7 @@ void IntegratingMerger::run(framework::ProcessingContext& ctx)
         // We expect that if the first object was TObject, then all should.
         LOG(INFO) << "Unpacking a new object as TObject";
         auto other = TObjectPtr(framework::DataRefUtils::as<TObject>(ref).release(), algorithm::deleteTCollections);
+        LOG(INFO) << "Unpacked, address: " << other.get();
         auto target = std::get<TObjectPtr>(mMergedObject);
         algorithm::merge(target.get(), other.get());
 
@@ -64,6 +65,7 @@ void IntegratingMerger::run(framework::ProcessingContext& ctx)
         // We expect that if the first object inherited MergeInterface, then all should.
         LOG(INFO) << "Unpacking a new object as MergeInterface";
         auto other = framework::DataRefUtils::as<MergeInterface>(ref);
+        LOG(INFO) << "Unpacked, address: " << other.get();
         std::get<MergeInterfacePtr>(mMergedObject)->merge(other.get());
       } else {
         throw std::runtime_error("mMergedObject' variant has no value.");
