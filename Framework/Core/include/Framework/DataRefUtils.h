@@ -19,6 +19,7 @@
 #include "Headers/DataHeader.h"
 #include "Framework/CheckTypes.h"
 #include "Framework/RuntimeError.h"
+#include "Framework/Logger.h"
 
 #include <gsl/gsl>
 
@@ -71,6 +72,7 @@ struct DataRefUtils {
         assert(requestedClass != nullptr);
 
         auto* object = ftm.ReadObjectAny(storedClass);
+        LOG(INFO) << "DataRefUtils ftm.ReadObjectAny(storedClass): " << object;
         if (object == nullptr) {
           throw runtime_error_f("Failed to read object with name %s from message using ROOT serialization.",
                                 (storedClass != nullptr ? storedClass->GetName() : "<unknown>"));
@@ -141,6 +143,7 @@ struct DataRefUtils {
 
         typename RSS::FairTMessage ftm(const_cast<char*>(ref.payload), header->payloadSize);
         result.reset(static_cast<wrapped*>(ftm.ReadObjectAny(cl)));
+        LOG(INFO) << "DataRefUtils result.reset(static_cast<wrapped*>(ftm.ReadObjectAny(cl))): " << result.get();
         if (result.get() == nullptr) {
           throw runtime_error_f("Unable to extract class %s", cl == nullptr ? "<name not available>" : cl->GetName());
         }
