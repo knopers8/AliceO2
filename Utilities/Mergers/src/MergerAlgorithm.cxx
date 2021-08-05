@@ -27,6 +27,8 @@
 #include <TObjArray.h>
 #include <TGraph.h>
 
+#include <Framework/Logger.h>
+
 namespace o2::mergers::algorithm
 {
 
@@ -96,10 +98,13 @@ void merge(TObject* const target, TObject* const other)
 
 void deleteTCollections(TObject* obj)
 {
+  LOG(INFO) << "Deleting TObject";
   if (auto c = dynamic_cast<TCollection*>(obj)) {
+    LOG(INFO) << "It is TCollection";
     c->SetOwner(false);
     auto iter = c->MakeIterator();
     while (auto element = iter->Next()) {
+      LOG(INFO) << "Entering a member of TCollection";
       deleteTCollections(element);
     }
     delete iter;
@@ -107,6 +112,7 @@ void deleteTCollections(TObject* obj)
   } else {
     delete obj;
   }
+  LOG(INFO) << "Deleted";
 }
 
 } // namespace o2::mergers::algorithm
