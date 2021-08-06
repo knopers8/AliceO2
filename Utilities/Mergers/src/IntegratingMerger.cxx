@@ -49,25 +49,21 @@ void IntegratingMerger::run(framework::ProcessingContext& ctx)
 
   for (const DataRef& ref : InputRecordWalker(ctx.inputs())) {
     if (ref.header != timerHeader) {
+      auto other = object_store_helpers::extractObjectFrom(ref);
       if (std::holds_alternative<std::monostate>(mMergedObject)) {
         LOG(INFO) << "Got first object";
-        mMergedObject = object_store_helpers::extractObjectFrom(ref);
+        mMergedObject = std::move(object_store_helpers::extractObjectFrom(ref));
 
       } else if (std::holds_alternative<TObjectPtr>(mMergedObject)) {
         // We expect that if the first object was TObject, then all should.
-        LOG(INFO) << "Unpacking a new object as TObject";
-        auto other = TObjectPtr(framework::DataRefUtils::as<TObject>(ref).release(), algorithm::deleteTCollections);
-        LOG(INFO) << "Unpacked, address: " << other.get();
-        auto target = std::get<TObjectPtr>(mMergedObject);
-        algorithm::merge(target.get(), other.get());
+        auto targetAsTObject = std::get<TObjectPtr>(mMergedObject);
+        auto otherAsTObject = std::get<TObjectPtr>(other);
+        algorithm::merge(targetAsTObject.get(), otherAsTObject.get());
 
       } else if (std::holds_alternative<MergeInterfacePtr>(mMergedObject)) {
         // We expect that if the first object inherited MergeInterface, then all should.
-        LOG(INFO) << "Unpacking a new object as MergeInterface";
-        auto other = framework::DataRefUtils::as<MergeInterface>(ref);
-        other->postDeserialization();
-        LOG(INFO) << "Unpacked, address: " << other.get();
-        std::get<MergeInterfacePtr>(mMergedObject)->merge(other.get());
+        auto otherAsMergeInterface = std::get<MergeInterfacePtr>(other);
+        std::get<MergeInterfacePtr>(mMergedObject)->merge(otherAsMergeInterface.get());
       } else {
         throw std::runtime_error("mMergedObject' variant has no value.");
       }
