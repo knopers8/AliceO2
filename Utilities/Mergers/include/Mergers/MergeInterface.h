@@ -39,7 +39,7 @@ class MergeInterface
   /// \brief Lets the child perform any routines after the object was deserialized (e.g. setting the correct ownership)
   virtual void postDeserialization() {};
 
-  ClassDef(MergeInterface, 0);
+  ClassDef(MergeInterface, 1);
 };
 
 } // namespace o2::mergers
