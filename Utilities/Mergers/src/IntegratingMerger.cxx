@@ -65,6 +65,7 @@ void IntegratingMerger::run(framework::ProcessingContext& ctx)
         // We expect that if the first object inherited MergeInterface, then all should.
         LOG(INFO) << "Unpacking a new object as MergeInterface";
         auto other = framework::DataRefUtils::as<MergeInterface>(ref);
+        other->postDeserialization();
         LOG(INFO) << "Unpacked, address: " << other.get();
         std::get<MergeInterfacePtr>(mMergedObject)->merge(other.get());
       } else {
