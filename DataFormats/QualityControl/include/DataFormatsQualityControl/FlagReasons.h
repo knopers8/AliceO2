@@ -86,8 +86,6 @@ class FlagReasonFactory {
 };
 */
 
-
-
 } // namespace quality_control
 } // namespace o2
 
