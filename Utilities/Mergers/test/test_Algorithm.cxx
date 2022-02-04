@@ -330,3 +330,30 @@ BOOST_AUTO_TEST_CASE(Deleting)
   // I am afraid we can't check more than that.
   BOOST_CHECK_NO_THROW(algorithm::deleteTCollections(main));
 }
+
+BOOST_AUTO_TEST_CASE(AverageHisto)
+{
+  TH1F* h1 = new TH1F("histo 1", "histo 1", bins, min, max);
+  h1->SetBit(TH1::kIsAverage);
+  h1->Fill(5);
+  h1->Fill(5);
+  h1->Fill(5);
+  h1->Fill(5);
+  h1->Fill(5);
+
+  TH1F* h2 = new TH1F("histo 2", "histo 2", bins, min, max);
+  h2->SetBit(TH1::kIsAverage);
+  h2->Fill(5);
+
+  auto h1Val = h1->GetBinContent(h1->FindBin(5));
+  auto h2Val = h2->GetBinContent(h2->FindBin(5));
+
+  auto* collection = new TList();
+  collection->SetOwner(false);
+  collection->Add(h1);
+
+  // h2->Merge(collection); // this ignores the flag completely
+  h2->Add(h1); // this gives the average of 1.66 instead of 3.0
+
+  BOOST_CHECK_CLOSE(h2->GetBinContent(h2->FindBin(5)), (h1Val + h2Val) / 2.0, 0.1); //fixme
+}
