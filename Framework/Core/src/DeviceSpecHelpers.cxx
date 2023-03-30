@@ -1351,6 +1351,7 @@ void DeviceSpecHelpers::prepareArguments(bool defaultQuiet, bool defaultStopped,
         realOdesc.add_options()("shm-zero-segment", bpo::value<std::string>());
         realOdesc.add_options()("shm-throw-bad-alloc", bpo::value<std::string>());
         realOdesc.add_options()("shm-segment-id", bpo::value<std::string>());
+        realOdesc.add_options()("shm-metadata-msg-size", bpo::value<std::string>());
         realOdesc.add_options()("shm-allocation", bpo::value<std::string>());
         realOdesc.add_options()("shm-no-cleanup", bpo::value<std::string>());
         realOdesc.add_options()("shmid", bpo::value<std::string>());
@@ -1532,6 +1533,7 @@ boost::program_options::options_description DeviceSpecHelpers::getForwardedDevic
     ("shm-zero-segment", bpo::value<std::string>()->default_value("false"), "zero shared memory segment")                                                            //
     ("shm-throw-bad-alloc", bpo::value<std::string>()->default_value("true"), "throw if insufficient shm memory")                                                    //
     ("shm-segment-id", bpo::value<std::string>()->default_value("0"), "shm segment id")                                                                              //
+    ("shm-metadata-msg-size", bpo::value<std::string>()->default_value("0"), "allows to artificially expand header size")                                            //
     ("shm-allocation", bpo::value<std::string>()->default_value("rbtree_best_fit"), "shm allocation method")                                                         //
     ("shm-no-cleanup", bpo::value<std::string>()->default_value("false"), "no shm cleanup")                                                                          //
     ("shmid", bpo::value<std::string>(), "shmid")                                                                                                                    //
