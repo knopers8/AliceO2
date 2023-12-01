@@ -93,7 +93,7 @@ framework::DataProcessorSpec MergerBuilder::buildSpec()
                                    mergerDataOrigin(),
                                    mergerDataDescription(mName),
                                    subSpec, // it servers as a unique merger output ID
-                                   Lifetime::Sporadic };
+                                   Lifetime::Sporadic};
   } else {
     // last layer
     merger.outputs[0].binding = {mergerIntegralOutputBinding()};
