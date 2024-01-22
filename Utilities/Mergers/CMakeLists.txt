@@ -28,6 +28,11 @@ o2_add_executable(topology-example
                   COMPONENT_NAME mergers
                   PUBLIC_LINK_LIBRARIES O2::Mergers)
 
+o2_add_executable(vector-example
+                  SOURCES src/vectorOfTObjectsExample.cxx
+                  COMPONENT_NAME mergers
+                  PUBLIC_LINK_LIBRARIES O2::Mergers)
+
 o2_add_executable(benchmark-topology
                   SOURCES test/mergersBenchmarkTopology.cxx
                   COMPONENT_NAME mergers
