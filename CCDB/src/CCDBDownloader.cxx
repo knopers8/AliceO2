@@ -323,7 +323,8 @@ CCDBDownloader::curl_context_t* CCDBDownloader::createCurlContext(curl_socket_t 
   context = (curl_context_t*)malloc(sizeof(*context));
   context->CD = this;
   context->sockfd = sockfd;
-  context->poll_handle = (uv_poll_t*)malloc(sizeof(*context->poll_handle));;
+  context->poll_handle = (uv_poll_t*)malloc(sizeof(*context->poll_handle));
+  ;
 
   uvErrorCheck(uv_poll_init_socket(mUVLoop, context->poll_handle, sockfd));
   mHandleMap[(uv_handle_t*)(context->poll_handle)] = true;
