@@ -77,6 +77,7 @@
 #include "ComputingResourceHelpers.h"
 #include "DataProcessingStatus.h"
 #include "DDSConfigHelpers.h"
+#include "KubernetesConfigHelpers.h"
 #include "O2ControlHelpers.h"
 #include "DeviceSpecHelpers.h"
 #include "GraphvizHelpers.h"
@@ -2622,6 +2623,21 @@ void initialiseDriverControl(bpo::variables_map const& varmap,
       DriverState::IMPORT_CURRENT_WORKFLOW, //
       DriverState::MATERIALISE_WORKFLOW     //
     };
+  } else if (!varmap["kubernetes"].as<std::string>().empty()) {
+    control.callbacks = {[workflowName = varmap["kubernetes"].as<std::string>()](WorkflowSpec const&,
+                                                                                 DeviceSpecs const& specs,
+                                                                                 DeviceExecutions const& executions,
+                                                                                 DataProcessorInfos const& dataProcessorInfos,
+                                                                                 CommandInfo const& commandInfo) {
+      KubernetesConfigHelpers::dumpDeviceSpec2Kubernetes(workflowName, specs, executions, dataProcessorInfos, commandInfo);
+    }};
+    control.forcedTransitions = {
+      DriverState::EXIT,                    //
+      DriverState::PERFORM_CALLBACKS,       //
+      DriverState::MERGE_CONFIGS,           //
+      DriverState::IMPORT_CURRENT_WORKFLOW, //
+      DriverState::MATERIALISE_WORKFLOW     //
+    };
   } else if (!varmap["o2-control"].as<std::string>().empty() or !varmap["mermaid"].as<std::string>().empty()) {
     // Dump the workflow in o2-control and/or mermaid format
     control.callbacks = {[filename = varmap["mermaid"].as<std::string>(),
@@ -2940,6 +2956,7 @@ int doMain(int argc, char** argv, o2::framework::WorkflowSpec const& workflow,
     ("timeout,t", bpo::value<uint64_t>()->default_value(0), "forced exit timeout (in seconds)")                                                                        //                                                                                                                                //
     ("dds,D", bpo::value<std::string>()->default_value(""), "create DDS configuration")                                                                                //                                                                                                                                  //
     ("dds-workflow-suffix,D", bpo::value<std::string>()->default_value(""), "suffix for DDS names")                                                                    //                                                                                                                                  //
+    ("kubernetes,k8s", bpo::value<std::string>()->default_value(""), "dump Kubernetes pod manifest under the specified name")                                          //
     ("dump-workflow,dump", bpo::value<bool>()->zero_tokens()->default_value(false), "dump workflow as JSON")                                                           //                                                                                                                                    //
     ("dump-workflow-file", bpo::value<std::string>()->default_value("-"), "file to which do the dump")                                                                 //                                                                                                                                      //
     ("driver-mode", bpo::value<DriverMode>(&driverMode)->default_value(DriverMode::STANDALONE), R"(how to run the driver. default: "standalone". Valid: "embedded")")  //                                                                                                                                      //
@@ -3118,9 +3135,15 @@ int doMain(int argc, char** argv, o2::framework::WorkflowSpec const& workflow,
     exit(1);
   }
   conflicting_options(varmap, "dds", "o2-control");
+  conflicting_options(varmap, "dds", "kubernetes");
   conflicting_options(varmap, "dds", "dump-workflow");
   conflicting_options(varmap, "dds", "run");
   conflicting_options(varmap, "dds", "graphviz");
+  conflicting_options(varmap, "kubernetes", "o2-control");
+  conflicting_options(varmap, "kubernetes", "mermaid");
+  conflicting_options(varmap, "kubernetes", "dump-workflow");
+  conflicting_options(varmap, "kubernetes", "run");
+  conflicting_options(varmap, "kubernetes", "graphviz");
   conflicting_options(varmap, "o2-control", "dump-workflow");
   conflicting_options(varmap, "o2-control", "run");
   conflicting_options(varmap, "o2-control", "graphviz");

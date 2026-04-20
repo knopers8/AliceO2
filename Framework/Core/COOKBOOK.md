@@ -107,6 +107,17 @@ If you are on linux you can get stacktraces on a various signals via the:
 
 option, where `<signal>` can be: all, segv, bus, ill, abrt, fpe and sys.
 
+### Exporting workflow manifests
+
+The driver can emit control-system manifests for deployment or inspection:
+
+* `--o2-control <workflow-name>` writes AliECS workflow and task templates under `workflows/` and `tasks/`.
+* `--dds <file>` writes a DDS topology XML into the given file (or `-` for stdout).
+* `--kubernetes <workflow-name>` writes a single Pod manifest under `kubernetes/<workflow-name>.yaml`.
+
+The Kubernetes manifest runs each DataProcessor in its own container within a shared pod, mounts a shared `/dev/shm` and `/tmp` for IPC/shmem channels, and exposes TCP bind ports declared by the workflow.
+The default container image is `aliceo2/o2:latest`.
+
 
 ### Debug GUI
 

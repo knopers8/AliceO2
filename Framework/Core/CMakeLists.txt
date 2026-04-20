@@ -106,6 +106,7 @@ o2_add_library(Framework
                        src/MessageContext.cxx
                        src/Metric2DViewIndex.cxx
                        src/SimpleOptionsRetriever.cxx
+                       src/KubernetesConfigHelpers.cxx
                        src/O2ControlHelpers.cxx
                        src/O2ControlLabels.cxx
                        src/CommonLabels.cxx
@@ -230,6 +231,7 @@ add_executable(o2-test-framework-core
               test/test_FairMQ.cxx
               test/test_ForwardInputs.cxx
               test/test_FrameworkDataFlowToDDS.cxx
+              test/test_FrameworkDataFlowToKubernetes.cxx
               test/test_FrameworkDataFlowToO2Control.cxx
               test/test_Graphviz.cxx
               test/test_GroupSlicer.cxx
